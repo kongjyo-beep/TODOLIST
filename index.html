@@ -18,38 +18,18 @@
         * { box-sizing: border-box; }
         body {
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-            background-color: var(--bg-color);
-            color: var(--text-main);
-            margin: 0;
-            padding: 20px;
-            display: flex;
-            justify-content: center;
+            background-color: var(--bg-color); color: var(--text-main);
+            margin: 0; padding: 20px; display: flex; justify-content: center;
         }
         .container {
-            width: 100%;
-            max-width: 1300px;
-            background: var(--calendar-bg);
-            border-radius: 12px;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.05);
-            padding: 20px;
-            display: flex;
-            flex-direction: column;
-            min-height: 80vh;
+            width: 100%; max-width: 1300px; background: var(--calendar-bg);
+            border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+            padding: 20px; display: flex; flex-direction: column; min-height: 80vh;
         }
 
         /* 상단 네비게이션 탭 */
-        .top-nav {
-            display: flex;
-            gap: 10px;
-            margin-bottom: 20px;
-            border-bottom: 1px solid var(--border-color);
-            padding-bottom: 15px;
-        }
-        .nav-btn {
-            padding: 8px 20px; border: none; background: none; font-size: 16px;
-            font-weight: bold; color: var(--text-muted); cursor: pointer;
-            border-radius: 20px; transition: 0.2s;
-        }
+        .top-nav { display: flex; gap: 10px; margin-bottom: 20px; border-bottom: 1px solid var(--border-color); padding-bottom: 15px; }
+        .nav-btn { padding: 8px 20px; border: none; background: none; font-size: 16px; font-weight: bold; color: var(--text-muted); cursor: pointer; border-radius: 20px; transition: 0.2s; }
         .nav-btn:hover { background: #f0f0f0; }
         .nav-btn.active { background: var(--primary); color: white; }
 
@@ -65,37 +45,46 @@
         /* 캘린더 그리드 */
         .calendar-grid {
             display: grid; grid-template-columns: repeat(7, 1fr); gap: 1px;
-            background: var(--border-color); border: 1px solid var(--border-color);
-            border-radius: 8px; overflow: hidden;
+            background: var(--border-color); border: 1px solid var(--border-color); border-radius: 8px; overflow: hidden;
         }
         .weekday { background: #fafafa; text-align: center; padding: 10px 0; font-weight: bold; font-size: 14px; }
         .day-cell {
             background: white; min-height: 120px; padding: 8px; cursor: pointer;
             transition: background 0.2s; display: flex; flex-direction: column; gap: 4px;
+            overflow: hidden; /* 영역 밖으로 나가는 것 방지 */
         }
         .day-cell:hover { background: #f9f9fa; }
         .day-cell.drag-over { background-color: var(--highlight-color) !important; }
         
-        /* 오늘 날짜 하이라이트 스타일 */
-        .day-cell.today-cell { background-color: rgba(66, 133, 244, 0.04); }
-        .day-number { font-size: 14px; margin-bottom: 5px; color: var(--text-muted); display: inline-flex; align-items: center; justify-content: center; }
-        .day-number.today {
-            background-color: var(--primary); color: white;
-            border-radius: 50%; width: 24px; height: 24px; font-weight: bold;
+        /* 오늘 날짜 하이라이트 스타일 (정렬 해치지 않는 포인트 디자인) */
+        .day-number { 
+            font-size: 14px; margin-bottom: 5px; color: var(--text-muted); 
+            display: flex; align-items: center; 
+        }
+        .day-number.today { color: var(--primary); font-weight: 800; }
+        .day-number.today::before {
+            content: ''; display: inline-block; width: 4px; height: 13px;
+            background-color: var(--primary); border-radius: 2px; margin-right: 6px;
         }
 
-        .day-view-container { background: white; border: 1px solid var(--border-color); border-radius: 8px; padding: 20px; min-height: 400px; }
+        .day-view-container { background: white; border: 1px solid var(--border-color); border-radius: 8px; padding: 20px; min-height: 400px; position: relative;}
+        .empty-placeholder { color: #aaa; text-align: center; padding: 40px; font-size: 14px; }
 
-        /* 투두 아이템 */
+        /* 투두 아이템 (말줄임표 적용) */
         .todo-item {
             font-size: 12px; padding: 4px 8px; border-radius: 4px; display: flex; align-items: center; gap: 6px;
             color: #333; background: rgba(0,0,0,0.05); border-left: 4px solid var(--gray-default);
-            word-break: break-all; cursor: grab; box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            cursor: grab; box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            overflow: hidden; /* Flex 컨테이너 내 말줄임표 필수 */
         }
         .todo-item.completed span { text-decoration: line-through; opacity: 0.5; }
-        .todo-item input[type="checkbox"] { margin: 0; cursor: pointer; accent-color: var(--primary); }
+        .todo-item input[type="checkbox"] { margin: 0; cursor: pointer; accent-color: var(--primary); flex-shrink: 0; }
+        .todo-item span {
+            white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+            flex-grow: 1; min-width: 0; /* 글자 넘어갈 때 ... 처리 */
+        }
 
-        /* 카테고리 보드 뷰 */
+        /* 카테고리 보드 뷰 (말줄임표 적용) */
         .board-view { display: flex; gap: 20px; overflow-x: auto; padding-bottom: 20px; align-items: flex-start; }
         .board-column { background: #f9f9fa; border-radius: 12px; width: 300px; min-width: 300px; padding: 15px; display: flex; flex-direction: column; gap: 10px; border: 1px solid var(--border-color); }
         .board-column.drag-over { background: var(--highlight-color); border: 2px dashed var(--primary); }
@@ -111,9 +100,9 @@
             border: 1px solid var(--border-color); cursor: grab; display: flex; align-items: flex-start; gap: 10px;
         }
         .board-card.completed .card-title { text-decoration: line-through; color: var(--text-muted); }
-        .board-card input[type="checkbox"] { margin-top: 3px; width: 16px; height: 16px; cursor: pointer; accent-color: var(--primary); }
-        .card-content { flex-grow: 1; display: flex; flex-direction: column; gap: 6px; }
-        .card-title { font-size: 14px; word-break: break-all; }
+        .board-card input[type="checkbox"] { margin-top: 3px; width: 16px; height: 16px; cursor: pointer; accent-color: var(--primary); flex-shrink: 0;}
+        .card-content { flex-grow: 1; display: flex; flex-direction: column; gap: 6px; min-width: 0; /* 말줄임표 필수 */ }
+        .card-title { font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
         .card-meta { display: flex; gap: 8px; font-size: 11px; color: var(--text-muted); align-items: center; }
         .meta-badge { background: #f0f0f0; padding: 2px 6px; border-radius: 4px; display: inline-flex; align-items: center; gap: 4px;}
         
@@ -131,12 +120,9 @@
 
         /* 미니멀 투두 추가 폼 */
         .minimal-form { display: flex; flex-direction: column; gap: 15px; }
-        
-        /* 추가된 카테고리 드롭다운 스타일 */
         .category-select-always {
             padding: 10px; border: 1px solid var(--border-color); border-radius: 8px;
-            width: 100%; font-size: 14px; background-color: #f9f9fa; cursor: pointer;
-            margin-bottom: 5px; outline: none;
+            width: 100%; font-size: 14px; background-color: #f9f9fa; cursor: pointer; margin-bottom: 5px; outline: none;
         }
         .category-select-always:focus { border-color: var(--primary); background: white;}
 
@@ -204,7 +190,7 @@
                 <select id="todoCategorySelect" class="category-select-always"></select>
             </div>
             
-            <input type="text" id="todoTitle" class="title-input" placeholder="할 일 내용 입력..." autofocus>
+            <input type="text" id="todoTitle" class="title-input" placeholder="할 일 내용 입력 후 Enter" autofocus onkeydown="if(event.key === 'Enter') saveTodo()">
             
             <div class="form-toggles">
                 <button class="toggle-btn" onclick="toggleInput('timeSection')">⏰ 시간</button>
@@ -214,7 +200,7 @@
             <div id="timeSection" class="hidden-input"><input type="time" id="todoTime"></div>
             <div id="dateSection" class="hidden-input"><input type="date" id="todoDate"></div>
 
-            <button class="submit-btn" onclick="saveTodo()">저장하고 계속 추가하기</button>
+            <button class="submit-btn" onclick="saveTodo()">저장하기</button>
         </div>
     </div>
 </div>
@@ -264,6 +250,7 @@
         return cat ? cat.color : 'var(--gray-default)';
     }
 
+    // 시차(KST) 버그를 막기 위한 안전한 날짜 포맷 함수
     function formatDateForInput(dateObj) {
         const y = dateObj.getFullYear();
         const m = String(dateObj.getMonth() + 1).padStart(2, '0');
@@ -271,7 +258,7 @@
         return `${y}-${m}-${d}`;
     }
 
-    // 오늘 날짜 문자열 구하기
+    // 오늘 날짜 문자열
     const todayStr = formatDateForInput(new Date());
 
     document.querySelectorAll('.nav-btn').forEach(btn => {
@@ -327,15 +314,16 @@
         cell.className = 'day-cell';
         cell.dataset.date = dateStr;
 
-        // 오늘 날짜 하이라이트 추가
-        const dayNum = document.createElement('div');
-        dayNum.className = 'day-number';
-        if (dateStr === todayStr) {
-            dayNum.classList.add('today');
-            cell.classList.add('today-cell');
+        // label이 있을 때만 날짜 숫자 생성 (일간 뷰에서는 라벨을 없애기 위함)
+        if (label) {
+            const dayNum = document.createElement('div');
+            dayNum.className = 'day-number';
+            if (dateStr === todayStr) {
+                dayNum.classList.add('today'); // 파란 막대기 생성용 클래스 추가
+            }
+            dayNum.textContent = label;
+            cell.appendChild(dayNum);
         }
-        dayNum.textContent = label;
-        cell.appendChild(dayNum);
 
         const dayTodos = todos.filter(t => t.date === dateStr).sort((a, b) => (a.time||'').localeCompare(b.time||''));
         
@@ -369,10 +357,10 @@
             if (draggedTodoId) updateTodoProp(draggedTodoId, 'date', dateStr);
         });
         
-        // 빈 공간이나 날짜 숫자 클릭 시 모달 열기
+        // 빈 공간 클릭 시 해당 날짜로 추가
         cell.addEventListener('click', e => {
-            if(e.target === cell || e.target.closest('.day-number')) {
-                openTodoModal(dateStr); // 달력에서 추가할 때는 카테고리 '미지정' 기본값
+            if(e.target === cell || e.target.closest('.day-number') || e.target.classList.contains('empty-placeholder')) {
+                openTodoModal(dateStr); 
             }
         });
 
@@ -410,8 +398,20 @@
     function renderDayView(dateStr) {
         const container = document.getElementById('dayContainer');
         container.innerHTML = '';
-        const cell = createCalendarCell(dateStr, '이곳을 클릭하거나 우측 하단 + 버튼을 눌러 추가하세요.');
+        
+        // 일간 뷰에서는 날짜 라벨('')을 숨겨 깔끔하게 처리
+        const cell = createCalendarCell(dateStr, '');
+        
+        // 할 일이 없을 때만 안내 문구 표시
+        if(todos.filter(t => t.date === dateStr).length === 0) {
+            const placeholder = document.createElement('div');
+            placeholder.className = 'empty-placeholder';
+            placeholder.textContent = '이곳을 클릭하거나 우측 하단 + 버튼을 눌러 추가하세요.';
+            cell.appendChild(placeholder);
+        }
+        
         cell.style.minHeight = '300px';
+        cell.style.border = 'none';
         container.appendChild(cell);
     }
 
@@ -429,7 +429,6 @@
             const header = document.createElement('div');
             header.className = 'board-header';
             
-            // 보드 뷰의 헤더 영역: 할일 추가(➕) 버튼과 설정(⚙️) 버튼 분리
             header.innerHTML = `
                 <div class="board-header-left">
                     <div class="color-square" style="background:${cat.color}"></div>
@@ -499,27 +498,24 @@
         }
     }
 
-    // 모달 열기 (dateStr: 특정 날짜, catId: 특정 카테고리)
     function openTodoModal(dateStr = '', catId = null) {
         const titleInput = document.getElementById('todoTitle');
         titleInput.value = '';
         document.getElementById('todoTime').value = '';
         
-        // 날짜를 지정하지 않고 켰을 경우, 오늘 날짜로 자동 설정
+        // 날짜가 안 넘어왔다면 기본값 오늘 날짜
         document.getElementById('todoDate').value = dateStr || todayStr;
         
-        // 카테고리 드롭다운 옵션 세팅
         const select = document.getElementById('todoCategorySelect');
         select.innerHTML = '<option value="">미지정 (카테고리 없음)</option>';
         categories.forEach(cat => {
             select.innerHTML += `<option value="${cat.id}">${cat.name}</option>`;
         });
 
-        // 카테고리 보드에서 ➕를 눌러서 켠 경우, 해당 카테고리를 기본 선택
         if (catId !== null) {
             select.value = catId;
         } else {
-            select.value = ""; // 달력에서 누르거나 우측 하단 플로팅 버튼일 경우 '미지정'
+            select.value = ""; 
         }
 
         document.querySelectorAll('.hidden-input').forEach(el => el.classList.remove('active'));
@@ -534,12 +530,11 @@
     function saveTodo() {
         const titleInput = document.getElementById('todoTitle');
         const title = titleInput.value.trim();
-        if (!title) return alert('할 일 내용을 입력하세요.');
+        if (!title) return; // 내용이 없으면 경고 없이 무시 (엔터 연타 방지)
 
         const newTodo = {
             id: 't_' + Date.now(),
             title: title,
-            // 캘린더에서 날짜가 지워졌을 경우 오늘 날짜로 안전하게 폴백
             date: document.getElementById('todoDate').value || todayStr,
             time: document.getElementById('todoTime').value || null,
             categoryId: document.getElementById('todoCategorySelect').value || null,
@@ -550,7 +545,7 @@
         saveData();
         renderView();
 
-        // 창을 닫지 않고, 제목만 지운 후 다시 입력창에 포커스 (연속 추가 기능)
+        // 입력창 비우고 포커스 유지 (연속 입력 지원)
         titleInput.value = '';
         titleInput.focus();
     }
