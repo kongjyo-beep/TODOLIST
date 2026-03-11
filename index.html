@@ -15,7 +15,7 @@
             --gray-default: #d9d9d9;
             --primary: #4285F4;
             --danger: #ff4d4f;
-            --warning: #faad14;
+            --warning: #faad14; /* 노란색 별표/아카이브 컬러 */
         }
         * { box-sizing: border-box; }
         body {
@@ -23,8 +23,9 @@
             background-color: var(--bg-color); color: var(--text-main);
             margin: 0; padding: 20px; display: flex; justify-content: center;
         }
+        /* 너비 1300px -> 1500px로 넓힘 */
         .container {
-            width: 100%; max-width: 1300px; background: var(--calendar-bg);
+            width: 100%; max-width: 1500px; background: var(--calendar-bg);
             border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.05);
             padding: 20px; display: flex; flex-direction: column; min-height: 80vh;
         }
@@ -64,15 +65,22 @@
         .day-view-container { background: white; border: 1px solid var(--border-color); border-radius: 8px; padding: 20px; min-height: 400px; position: relative;}
         .empty-placeholder { color: #aaa; text-align: center; padding: 40px; font-size: 14px; }
 
+        /* 텍스트 드래그(블록지정) 방지 & 레이아웃 정렬 */
         .todo-item {
             font-size: 12px; padding: 4px 8px; border-radius: 4px; display: flex; align-items: center; gap: 6px;
             color: #333; background: rgba(0,0,0,0.05); border-left: 4px solid var(--gray-default);
             cursor: grab; box-shadow: 0 1px 3px rgba(0,0,0,0.1); overflow: hidden;
+            user-select: none; /* 핵심: 드래그 시 파란 블록 방지 */
         }
-        .todo-item.completed span { text-decoration: line-through; opacity: 0.5; }
+        .todo-item:active { cursor: grabbing; }
+        .todo-item.completed span.todo-title-text { text-decoration: line-through; opacity: 0.5; }
         .todo-item input[type="checkbox"] { margin: 0; cursor: pointer; accent-color: var(--primary); flex-shrink: 0; }
-        .todo-item span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex-grow: 1; min-width: 0; cursor: pointer; }
-        .todo-item span:hover { text-decoration: underline; opacity: 0.8; }
+        .todo-title-text { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex-grow: 1; min-width: 0; cursor: pointer; }
+        .todo-title-text:hover { text-decoration: underline; opacity: 0.8; }
+        
+        /* 별표 아이콘 스타일 */
+        .star-btn { font-size: 16px; cursor: pointer; margin-left: auto; flex-shrink: 0; display: inline-flex; align-items: center; padding-left: 5px;}
+        .star-btn:hover { transform: scale(1.2); }
 
         .board-view { display: flex; gap: 20px; overflow-x: auto; padding-bottom: 20px; align-items: flex-start; }
         .board-column { 
@@ -93,7 +101,7 @@
         
         .board-card {
             background: white; padding: 12px; border-radius: 8px; box-shadow: 0 1px 4px rgba(0,0,0,0.05);
-            border: 1px solid var(--border-color); cursor: grab; display: flex; align-items: flex-start; gap: 10px;
+            border: 1px solid var(--border-color); cursor: grab; display: flex; align-items: flex-start; gap: 10px; user-select: none;
         }
         .board-card.completed .card-title { text-decoration: line-through; color: var(--text-muted); }
         .board-card input[type="checkbox"] { margin-top: 3px; width: 16px; height: 16px; cursor: pointer; accent-color: var(--primary); flex-shrink: 0;}
@@ -153,7 +161,6 @@
         .archive-btn { background: var(--warning); color: white; border: none; padding: 12px 16px; border-radius: 8px; font-weight: bold; cursor: pointer; font-size: 14px; display: none; }
         .archive-btn:hover { background: #d48806; }
 
-        /* 팔레트 그리드를 4열로 수정 */
         .palette-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-top: 10px; }
         .color-swatch { width: 100%; aspect-ratio: 1; border-radius: 8px; cursor: pointer; border: 2px solid transparent; transition: transform 0.1s; }
         .color-swatch:hover { transform: scale(1.1); }
@@ -242,12 +249,11 @@
 </div>
 
 <script>
-    // 새롭게 적용된 16가지 파스텔 색상 팔레트
     const PASTEL_COLORS = [
-        '#FFF475', '#F8E3A1', '#FFCC80', '#FFAB91', // 1행 (노랑~주황)
-        '#E6EE9C', '#A5D6A7', '#80CBC4', '#B39DDB', // 2행 (연두~보라)
-        '#90CAF9', '#9FA8DA', '#F48FB1', '#CE93D8', // 3행 (파랑~분홍)
-        '#BCAAA4', '#B0BEC5', '#EEEEEE', '#607D8B'  // 4행 (갈색~회색)
+        '#FFF475', '#F8E3A1', '#FFCC80', '#FFAB91',
+        '#E6EE9C', '#A5D6A7', '#80CBC4', '#B39DDB',
+        '#90CAF9', '#9FA8DA', '#F48FB1', '#CE93D8',
+        '#BCAAA4', '#B0BEC5', '#EEEEEE', '#607D8B'
     ];
     
     let currentView = 'month';
@@ -261,13 +267,17 @@
 
     let todos = JSON.parse(localStorage.getItem('myPremiumTodos')) || [];
     let categories = JSON.parse(localStorage.getItem('myPremiumCategories')) || [
-        { id: 'cat_sda', name: 'SDA', color: PASTEL_COLORS[8] }, // 기본 색상도 새 팔레트에서 선택
+        { id: 'cat_sda', name: 'SDA', color: PASTEL_COLORS[8] }, 
         { id: 'cat_ale', name: '에일', color: PASTEL_COLORS[2] },
         { id: 'cat_nike', name: '니케', color: PASTEL_COLORS[5] },
         { id: 'cat_btw', name: 'BTW', color: PASTEL_COLORS[1] }
     ];
 
-    todos.forEach(t => { if(t.archived === undefined) t.archived = false; });
+    // 데이터 호환성 보장 (isImportant 속성 추가)
+    todos.forEach(t => { 
+        if(t.archived === undefined) t.archived = false; 
+        if(t.isImportant === undefined) t.isImportant = false;
+    });
 
     function saveData() {
         localStorage.setItem('myPremiumTodos', JSON.stringify(todos));
@@ -294,6 +304,29 @@
     }
 
     const todayStr = formatDateForInput(new Date());
+
+    // 가장 핵심적인 정렬 함수 (별표 -> 카테고리 순서 -> 시간 순서)
+    function sortTodosArray(todosArray) {
+        return todosArray.sort((a, b) => {
+            // 1순위: 중요(별표) 여부
+            if (a.isImportant && !b.isImportant) return -1;
+            if (!a.isImportant && b.isImportant) return 1;
+
+            // 2순위: 카테고리 기둥 순서
+            let indexA = categories.findIndex(c => c.id === a.categoryId);
+            let indexB = categories.findIndex(c => c.id === b.categoryId);
+            // 카테고리 못 찾으면(미지정) 맨 뒤로
+            if (indexA === -1) indexA = 999;
+            if (indexB === -1) indexB = 999;
+            
+            if (indexA !== indexB) return indexA - indexB;
+
+            // 3순위: 시간
+            const timeA = a.time || '24:00';
+            const timeB = b.time || '24:00';
+            return timeA.localeCompare(timeB);
+        });
+    }
 
     document.querySelectorAll('.nav-btn').forEach(btn => {
         btn.addEventListener('click', (e) => {
@@ -365,7 +398,9 @@
             cell.appendChild(dayNum);
         }
 
-        const dayTodos = todos.filter(t => t.date === dateStr && !t.archived).sort((a, b) => (a.time||'').localeCompare(b.time||''));
+        // 필터링 후 강력한 정렬 로직 적용
+        let dayTodos = todos.filter(t => t.date === dateStr && !t.archived);
+        dayTodos = sortTodosArray(dayTodos);
         
         dayTodos.forEach(todo => {
             const item = document.createElement('div');
@@ -386,9 +421,14 @@
                 }
             }
             
+            // 별표 아이콘 포함 HTML 구성
+            const starColor = todo.isImportant ? 'var(--warning)' : '#cccccc';
+            const starIcon = todo.isImportant ? '★' : '☆';
+
             item.innerHTML = `
                 <input type="checkbox" ${todo.completed ? 'checked' : ''} onchange="toggleComplete('${todo.id}', event)">
-                <span onclick="editTodo('${todo.id}', event)">${catLabel}${todo.time ? `[${todo.time}] ` : ''}${todo.title}</span>
+                <span class="todo-title-text" onclick="editTodo('${todo.id}', event)">${catLabel}${todo.time ? `[${todo.time}] ` : ''}${todo.title}</span>
+                <span class="star-btn" style="color: ${starColor};" onclick="toggleStar('${todo.id}', event)">${starIcon}</span>
             `;
 
             item.addEventListener('dragstart', (e) => {
@@ -410,6 +450,7 @@
         });
         
         cell.addEventListener('click', e => {
+            // 별표, 체크박스 등 다른 요소를 누르지 않고 빈 배경을 눌렀을 때만 모달 열기
             if(e.target === cell || e.target.closest('.day-number') || e.target.classList.contains('empty-placeholder')) {
                 openTodoModal(dateStr); 
             }
@@ -469,6 +510,9 @@
             dateTag = `${d.getMonth()+1}월 ${d.getDate()}일`;
         }
 
+        const starColor = todo.isImportant ? 'var(--warning)' : '#cccccc';
+        const starIcon = todo.isImportant ? '★' : '☆';
+
         card.innerHTML = `
             <input type="checkbox" ${todo.completed ? 'checked' : ''} onchange="toggleComplete('${todo.id}', event)">
             <div class="card-content" onclick="editTodo('${todo.id}', event)">
@@ -478,6 +522,7 @@
                     ${todo.time ? `<span class="meta-badge">⏰ ${todo.time}</span>` : ''}
                 </div>
             </div>
+            <span class="star-btn" style="color: ${starColor}; margin-top: -3px;" onclick="toggleStar('${todo.id}', event)">${starIcon}</span>
         `;
 
         card.addEventListener('dragstart', (e) => { 
@@ -528,8 +573,11 @@
             `;
             col.appendChild(header);
 
-            const catTodos = todos.filter(t => (cat.id ? t.categoryId === cat.id : !t.categoryId || !categories.find(c=>c.id === t.categoryId)) && !t.archived);
+            let catTodos = todos.filter(t => (cat.id ? t.categoryId === cat.id : !t.categoryId || !categories.find(c=>c.id === t.categoryId)) && !t.archived);
             
+            // 보드에서도 별표 순서로 정렬 적용
+            catTodos = sortTodosArray(catTodos);
+
             const activeTodos = catTodos.filter(t => !t.completed);
             const completedTodos = catTodos.filter(t => t.completed);
 
@@ -619,7 +667,7 @@
                 <div class="archive-info">
                     <div class="archive-title" style="text-decoration: ${todo.completed ? 'line-through' : 'none'}; opacity: ${todo.completed ? '0.6' : '1'};">
                         <span style="display:inline-block; width:10px; height:10px; border-radius:50%; background:${catColor}; margin-right:5px;"></span>
-                        ${todo.title}
+                        ${todo.isImportant ? '<span style="color:var(--warning)">★</span> ' : ''}${todo.title}
                     </div>
                     <div class="archive-meta">
                         📁 ${catName} &nbsp;|&nbsp; 📅 ${todo.date} ${todo.time ? `&nbsp;|&nbsp; ⏰ ${todo.time}` : ''}
@@ -648,13 +696,23 @@
         }
     }
 
-    // --- 상태 토글 ---
+    // --- 상태 변경 및 토글 ---
     function toggleComplete(id, event) {
         if(event) event.stopPropagation();
         const todo = todos.find(t => t.id === id);
         if (todo) { todo.completed = !todo.completed; saveData(); renderView(); }
     }
     
+    function toggleStar(id, event) {
+        if(event) event.stopPropagation();
+        const todo = todos.find(t => t.id === id);
+        if (todo) { 
+            todo.isImportant = !todo.isImportant; 
+            saveData(); 
+            renderView(); 
+        }
+    }
+
     function updateTodoProp(todoId, prop, value) {
         const todo = todos.find(t => t.id === todoId);
         if (todo && todo[prop] !== value) {
@@ -733,7 +791,8 @@
                 time: document.getElementById('todoTime').value || null,
                 categoryId: document.getElementById('todoCategorySelect').value || null,
                 completed: false,
-                archived: false
+                archived: false,
+                isImportant: false // 새 항목 기본값
             };
             todos.push(newTodo);
             saveData(); renderView();
