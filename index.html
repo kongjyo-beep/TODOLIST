@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>나만의 프로젝트 캘린더 (DnD)</title>
+    <title>프로젝트 캘린더 & 보드</title>
     <style>
         :root {
             --bg-color: #f5f5f7;
@@ -11,8 +11,11 @@
             --border-color: #e0e0e0;
             --text-main: #333;
             --text-muted: #888;
-            --highlight-color: #e6f7ff; /* 드래그 시 강조 색상 */
+            --highlight-color: #e6f7ff;
+            --gray-default: #d9d9d9;
+            --primary: #4285F4;
         }
+        * { box-sizing: border-box; }
         body {
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
             background-color: var(--bg-color);
@@ -24,12 +27,42 @@
         }
         .container {
             width: 100%;
-            max-width: 1200px;
+            max-width: 1300px;
             background: var(--calendar-bg);
             border-radius: 12px;
             box-shadow: 0 4px 12px rgba(0,0,0,0.05);
             padding: 20px;
+            display: flex;
+            flex-direction: column;
+            min-height: 80vh;
         }
+
+        /* 상단 네비게이션 탭 */
+        .top-nav {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 15px;
+        }
+        .nav-btn {
+            padding: 8px 20px;
+            border: none;
+            background: none;
+            font-size: 16px;
+            font-weight: bold;
+            color: var(--text-muted);
+            cursor: pointer;
+            border-radius: 20px;
+            transition: 0.2s;
+        }
+        .nav-btn:hover { background: #f0f0f0; }
+        .nav-btn.active {
+            background: var(--primary);
+            color: white;
+        }
+
+        /* 컨트롤 헤더 (날짜 이동) */
         .header {
             display: flex;
             justify-content: space-between;
@@ -46,12 +79,19 @@
         }
         .header button:hover { background: #f0f0f0; }
         
+        /* 공통 뷰 영역 */
+        .view-area { display: none; flex-grow: 1; }
+        .view-area.active { display: block; }
+
+        /* 월간/주간 캘린더 그리드 */
         .calendar-grid {
             display: grid;
             grid-template-columns: repeat(7, 1fr);
             gap: 1px;
             background: var(--border-color);
             border: 1px solid var(--border-color);
+            border-radius: 8px;
+            overflow: hidden;
         }
         .weekday {
             background: #fafafa;
@@ -71,388 +111,93 @@
             gap: 4px;
         }
         .day-cell:hover { background: #f9f9fa; }
-        /* 드래그 앤 드롭 관련 스타일 추가 */
-        .day-cell.drag-over {
-            background-color: var(--highlight-color) !important;
+        .day-cell.drag-over { background-color: var(--highlight-color) !important; }
+        .day-number { font-size: 14px; margin-bottom: 5px; color: var(--text-muted); }
+
+        /* 일간 뷰 */
+        .day-view-container {
+            background: white;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 20px;
+            min-height: 400px;
         }
-        
-        .day-number {
-            font-size: 14px;
-            margin-bottom: 5px;
-            color: var(--text-muted);
-        }
-        
-        /* 투두 아이템 스타일 */
+
+        /* 투두 아이템 (캘린더용) */
         .todo-item {
             font-size: 12px;
-            padding: 4px 6px;
+            padding: 4px 8px;
             border-radius: 4px;
             display: flex;
             align-items: center;
             gap: 6px;
-            color: white;
+            color: #333;
+            background: rgba(0,0,0,0.05);
+            border-left: 4px solid var(--gray-default);
             word-break: break-all;
-            cursor: grab; /* 드래그 가능 커서 */
+            cursor: grab;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
         }
-        .todo-item:active { cursor: grabbing; }
-        .todo-item.dragging { opacity: 0.5; } /* 드래그 중 반투명 처리 */
+        .todo-item.completed span { text-decoration: line-through; opacity: 0.5; }
+        .todo-item input[type="checkbox"] { margin: 0; cursor: pointer; accent-color: var(--primary); }
 
-        .todo-item.completed span {
-            text-decoration: line-through;
-            opacity: 0.7;
-        }
-        .todo-item input[type="checkbox"] {
-            margin: 0;
-            cursor: pointer;
-        }
-
-        /* 모달 스타일 (일별 뷰) */
-        .modal-overlay {
-            position: fixed;
-            top: 0; left: 0; right: 0; bottom: 0;
-            background: rgba(0,0,0,0.5);
+        /* 카테고리 (보드) 뷰 - 구글 테스크 스타일 */
+        .board-view {
             display: flex;
-            justify-content: center;
-            align-items: center;
-            visibility: hidden;
-            opacity: 0;
-            transition: 0.2s;
-            z-index: 100;
+            gap: 20px;
+            overflow-x: auto;
+            padding-bottom: 20px;
+            align-items: flex-start;
         }
-        .modal-overlay.active {
-            visibility: visible;
-            opacity: 1;
-        }
-        .modal-content {
-            background: white;
-            width: 400px;
+        .board-column {
+            background: #f9f9fa;
             border-radius: 12px;
-            padding: 20px;
-            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
-        }
-        .modal-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 15px;
-            border-bottom: 1px solid var(--border-color);
-            padding-bottom: 10px;
-        }
-        .close-btn { background: none; border: none; font-size: 20px; cursor: pointer; }
-        
-        .add-form {
+            width: 300px;
+            min-width: 300px;
+            padding: 15px;
             display: flex;
             flex-direction: column;
             gap: 10px;
-            margin-bottom: 20px;
-        }
-        .add-form input, .add-form select, .add-form button {
-            padding: 8px;
             border: 1px solid var(--border-color);
-            border-radius: 6px;
         }
-        .add-form button {
-            background: #4285F4;
-            color: white;
-            border: none;
-            font-weight: bold;
-            cursor: pointer;
-        }
-        .add-form button:hover { background: #3367d6; }
-        
-        .daily-todos {
-            max-height: 300px;
-            overflow-y: auto;
-            display: flex;
-            flex-direction: column;
-            gap: 8px;
-        }
-        .daily-todo-item {
+        .board-column.drag-over { background: var(--highlight-color); border: 2px dashed var(--primary); }
+        .board-header {
             display: flex;
             align-items: center;
             justify-content: space-between;
-            padding: 10px;
-            border-radius: 6px;
-            color: white;
+            font-weight: bold;
+            margin-bottom: 10px;
         }
-        .todo-info { display: flex; align-items: center; gap: 10px; }
-        .todo-time { font-size: 11px; opacity: 0.9; background: rgba(0,0,0,0.2); padding: 2px 4px; border-radius: 3px;}
-        .delete-btn { background: rgba(255,255,255,0.3); border: none; color: white; cursor: pointer; border-radius: 4px; padding: 2px 6px; }
-    </style>
-</head>
-<body>
-
-<div class="container">
-    <div class="header">
-        <button id="prevBtn">&lt; 이전 달</button>
-        <h1 id="monthYear"></h1>
-        <button id="nextBtn">다음 달 &gt;</button>
-    </div>
-    
-    <div class="calendar-grid" id="calendar">
-        <div class="weekday">일</div><div class="weekday">월</div><div class="weekday">화</div>
-        <div class="weekday">수</div><div class="weekday">목</div><div class="weekday">금</div><div class="weekday">토</div>
-        </div>
-</div>
-
-<div class="modal-overlay" id="modal">
-    <div class="modal-content">
-        <div class="modal-header">
-            <h2 id="modalDateTitle"></h2>
-            <button class="close-btn" id="closeModalBtn">&times;</button>
-        </div>
+        .board-header-left { display: flex; align-items: center; gap: 8px; }
+        .color-square {
+            width: 14px;
+            height: 14px;
+            border-radius: 4px;
+            background: var(--gray-default);
+        }
+        .settings-btn { background: none; border: none; cursor: pointer; color: var(--text-muted); }
+        .settings-btn:hover { color: var(--text-main); }
         
-        <div class="add-form">
-            <input type="text" id="todoTitle" placeholder="할 일 입력 (예: 기획안 제출)">
-            <input type="time" id="todoTime">
-            <select id="todoCategory">
-                <option value="#4285F4">SDA (파란색)</option>
-                <option value="#EA4335">에일 (빨간색)</option>
-                <option value="#34A853">니케 (초록색)</option>
-                <option value="#FBBC05">BTW (노란색)</option>
-                <option value="#8E24AA">개인일정 (보라색)</option>
-            </select>
-            <button id="addTodoBtn">추가하기</button>
-        </div>
-        
-        <div class="daily-todos" id="dailyTodoList">
-            </div>
-    </div>
-</div>
-
-<script>
-    // 상태 관리
-    let currentDate = new Date(); // 현재 달력 기준 날짜
-    let selectedDate = null; // 모달을 열었을 때 선택된 날짜 문자열 (YYYY-MM-DD)
-    let draggedTodoId = null; // 드래그 중인 할 일의 ID
-
-    // 로컬 스토리지에서 데이터 불러오기
-    let todos = JSON.parse(localStorage.getItem('myCalendarTodos')) || [];
-
-    const monthYearEl = document.getElementById('monthYear');
-    const calendarEl = document.getElementById('calendar');
-    const modal = document.getElementById('modal');
-    const modalDateTitle = document.getElementById('modalDateTitle');
-    const dailyTodoList = document.getElementById('dailyTodoList');
-    
-    // 캘린더 렌더링 함수
-    function renderCalendar() {
-        // 기존 날짜 셀들 삭제 (첫 7개 요일 헤더는 유지)
-        while (calendarEl.children.length > 7) {
-            calendarEl.removeChild(calendarEl.lastChild);
+        /* 보드용 투두 카드 */
+        .board-card {
+            background: white;
+            padding: 12px;
+            border-radius: 8px;
+            box-shadow: 0 1px 4px rgba(0,0,0,0.05);
+            border: 1px solid var(--border-color);
+            cursor: grab;
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
         }
-
-        const year = currentDate.getFullYear();
-        const month = currentDate.getMonth();
-        monthYearEl.textContent = `${year}년 ${month + 1}월`;
-
-        const firstDay = new Date(year, month, 1).getDay();
-        const daysInMonth = new Date(year, month + 1, 0).getDate();
-
-        // 빈 셀 (이전 달)
-        for (let i = 0; i < firstDay; i++) {
-            const emptyCell = document.createElement('div');
-            emptyCell.className = 'day-cell';
-            emptyCell.style.background = '#fafafa';
-            calendarEl.appendChild(emptyCell);
+        .board-card.completed .card-title { text-decoration: line-through; color: var(--text-muted); }
+        .board-card input[type="checkbox"] {
+            margin-top: 3px;
+            width: 16px; height: 16px;
+            cursor: pointer;
+            accent-color: var(--primary);
         }
-
-        // 날짜 셀 생성 loop
-        for (let day = 1; day <= daysInMonth; day++) {
-            const cell = document.createElement('div');
-            cell.className = 'day-cell';
-            
-            // 날짜 포맷 (YYYY-MM-DD)
-            const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-            cell.dataset.date = dateStr; // 드롭 시 날짜 식별용 데이터 속성
-
-            const dayNum = document.createElement('div');
-            dayNum.className = 'day-number';
-            dayNum.textContent = day;
-            cell.appendChild(dayNum);
-
-            // 해당 날짜의 투두들 필터링 및 렌더링
-            const dayTodos = todos.filter(t => t.date === dateStr).sort((a, b) => a.time.localeCompare(b.time));
-            
-            dayTodos.forEach(todo => {
-                const todoDiv = document.createElement('div');
-                todoDiv.className = `todo-item ${todo.completed ? 'completed' : ''}`;
-                todoDiv.style.backgroundColor = todo.color;
-                todoDiv.draggable = true; // 드래그 가능하게 설정
-                todoDiv.dataset.id = todo.id; // 드래그 시 ID 식별용
-                
-                todoDiv.innerHTML = `
-                    <input type="checkbox" ${todo.completed ? 'checked' : ''} onchange="toggleTodo('${todo.id}', event)">
-                    <span>${todo.time ? `[${todo.time}] ` : ''}${todo.title}</span>
-                `;
-                
-                // --- 드래그 이벤트 리스너 ---
-                todoDiv.addEventListener('dragstart', (e) => {
-                    e.stopPropagation(); // 부모 요소 클릭 방지
-                    draggedTodoId = todo.id;
-                    todoDiv.classList.add('dragging');
-                    // 드래그 시 데이터 설정 (일부 브라우저 호환성 위해)
-                    e.dataTransfer.setData('text/plain', todo.id); 
-                });
-                todoDiv.addEventListener('dragend', (e) => {
-                    e.stopPropagation();
-                    draggedTodoId = null;
-                    todoDiv.classList.remove('dragging');
-                    // 드래그 종료 후 모든 셀의 하이라이트 제거
-                    document.querySelectorAll('.day-cell').forEach(c => c.classList.remove('drag-over'));
-                });
-
-                cell.appendChild(todoDiv);
-            });
-
-            // --- 드롭존(날짜 셀) 이벤트 리스너 ---
-            cell.addEventListener('dragover', (e) => {
-                e.preventDefault(); // 드롭 허용을 위해 필수
-                cell.classList.add('drag-over'); // 드래그 중인 셀 하이라이트
-            });
-            cell.addEventListener('dragleave', (e) => {
-                 cell.classList.remove('drag-over'); // 하이라이트 제거
-            });
-            cell.addEventListener('drop', (e) => {
-                e.preventDefault();
-                cell.classList.remove('drag-over');
-                if (draggedTodoId) {
-                    updateTodoDate(draggedTodoId, dateStr);
-                }
-            });
-
-            // 셀 클릭 시 모달 열기 (드래그가 아닐 때만)
-            cell.addEventListener('click', (e) => {
-                if (e.target === cell || e.target.classList.contains('day-number')) {
-                     openModal(dateStr, year, month + 1, day);
-                }
-            });
-            calendarEl.appendChild(cell);
-        }
-    }
-
-    // 날짜 변경 함수 (드래그 앤 드롭 시 호출)
-    function updateTodoDate(todoId, newDate) {
-        const todo = todos.find(t => t.id === todoId);
-        if (todo && todo.date !== newDate) {
-            todo.date = newDate;
-            saveTodos();
-            renderCalendar();
-            // 만약 모달이 열려있었다면 닫아줌 (데이터 꼬임 방지)
-            modal.classList.remove('active');
-        }
-    }
-
-    // 모달 열기
-    function openModal(dateStr, year, month, day) {
-        selectedDate = dateStr;
-        modalDateTitle.textContent = `${year}년 ${month}월 ${day}일 할 일`;
-        renderDailyTodos();
-        modal.classList.add('active');
-    }
-
-    // 모달 내 투두 리스트 렌더링
-    function renderDailyTodos() {
-        dailyTodoList.innerHTML = '';
-        const dayTodos = todos.filter(t => t.date === selectedDate).sort((a, b) => a.time.localeCompare(b.time));
-        
-        if(dayTodos.length === 0) {
-            dailyTodoList.innerHTML = '<div style="color:#888; text-align:center; padding:20px;">할 일이 없습니다.</div>';
-            return;
-        }
-
-        dayTodos.forEach(todo => {
-            const item = document.createElement('div');
-            item.className = 'daily-todo-item';
-            item.style.backgroundColor = todo.color;
-            if(todo.completed) item.style.opacity = '0.6';
-
-            item.innerHTML = `
-                <div class="todo-info">
-                    <input type="checkbox" ${todo.completed ? 'checked' : ''} onchange="toggleTodo('${todo.id}')">
-                    ${todo.time ? `<span class="todo-time">${todo.time}</span>` : ''}
-                    <span style="${todo.completed ? 'text-decoration: line-through;' : ''}">${todo.title}</span>
-                </div>
-                <button class="delete-btn" onclick="deleteTodo('${todo.id}')">삭제</button>
-            `;
-            dailyTodoList.appendChild(item);
-        });
-    }
-
-    // 투두 추가
-    document.getElementById('addTodoBtn').addEventListener('click', () => {
-        const titleInput = document.getElementById('todoTitle');
-        const timeInput = document.getElementById('todoTime');
-        const categoryInput = document.getElementById('todoCategory');
-
-        if (!titleInput.value.trim()) {
-            alert('할 일을 입력해주세요!');
-            return;
-        }
-
-        const newTodo = {
-            id: Date.now().toString(), // 고유 ID 생성
-            date: selectedDate,
-            title: titleInput.value.trim(),
-            time: timeInput.value,
-            color: categoryInput.value, // 선택한 카테고리 색상
-            completed: false
-        };
-
-        todos.push(newTodo);
-        saveTodos();
-        
-        // 입력 폼 초기화
-        titleInput.value = '';
-        timeInput.value = '';
-        
-        // 화면 업데이트
-        renderDailyTodos();
-        renderCalendar();
-    });
-
-    // 투두 완료/미완료 토글
-    window.toggleTodo = function(id, event) {
-        if(event) event.stopPropagation(); // 캘린더 셀 클릭, 드래그 이벤트 방지
-        const todo = todos.find(t => t.id === id);
-        if (todo) {
-            todo.completed = !todo.completed;
-            saveTodos();
-            renderCalendar();
-            if (modal.classList.contains('active')) renderDailyTodos();
-        }
-    }
-
-    // 투두 삭제
-    window.deleteTodo = function(id) {
-        todos = todos.filter(t => t.id !== id);
-        saveTodos();
-        renderDailyTodos();
-        renderCalendar();
-    }
-
-    // 로컬 스토리지에 저장
-    function saveTodos() {
-        localStorage.setItem('myCalendarTodos', JSON.stringify(todos));
-    }
-
-    // 모달 닫기
-    document.getElementById('closeModalBtn').addEventListener('click', () => {
-        modal.classList.remove('active');
-    });
-
-    // 달력 이동 버튼
-    document.getElementById('prevBtn').addEventListener('click', () => {
-        currentDate.setMonth(currentDate.getMonth() - 1);
-        renderCalendar();
-    });
-    document.getElementById('nextBtn').addEventListener('click', () => {
-        currentDate.setMonth(currentDate.getMonth() + 1);
-        renderCalendar();
-    });
-
-    // 초기 렌더링
-    renderCalendar();
-</script>
-</body>
-</html>
+        .card-content { flex-grow: 1; display: flex; flex-direction: column; gap: 6px; }
+        .card-title { font-size: 14px; word-break: break-all; }
+        .card-meta { display: flex; gap: 8px; font-size: 11px; color: var(--text-muted); align-items: center; }
+        .meta-badge { background: #f0f0f0; padding: 2px 6px; border-radius: 4px; display:
