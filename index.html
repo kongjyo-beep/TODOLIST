@@ -14,6 +14,7 @@
             --highlight-color: #e6f7ff;
             --gray-default: #d9d9d9;
             --primary: #4285F4;
+            --danger: #ff4d4f;
         }
         * { box-sizing: border-box; }
         body {
@@ -27,13 +28,11 @@
             padding: 20px; display: flex; flex-direction: column; min-height: 80vh;
         }
 
-        /* 상단 네비게이션 탭 */
         .top-nav { display: flex; gap: 10px; margin-bottom: 20px; border-bottom: 1px solid var(--border-color); padding-bottom: 15px; }
         .nav-btn { padding: 8px 20px; border: none; background: none; font-size: 16px; font-weight: bold; color: var(--text-muted); cursor: pointer; border-radius: 20px; transition: 0.2s; }
         .nav-btn:hover { background: #f0f0f0; }
         .nav-btn.active { background: var(--primary); color: white; }
 
-        /* 헤더 */
         .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
         .header h1 { margin: 0; font-size: 24px; }
         .header button { padding: 8px 16px; cursor: pointer; border: 1px solid var(--border-color); background: white; border-radius: 6px; }
@@ -42,7 +41,6 @@
         .view-area { display: none; flex-grow: 1; }
         .view-area.active { display: block; }
 
-        /* 캘린더 그리드 */
         .calendar-grid {
             display: grid; grid-template-columns: repeat(7, 1fr); gap: 1px;
             background: var(--border-color); border: 1px solid var(--border-color); border-radius: 8px; overflow: hidden;
@@ -50,17 +48,12 @@
         .weekday { background: #fafafa; text-align: center; padding: 10px 0; font-weight: bold; font-size: 14px; }
         .day-cell {
             background: white; min-height: 120px; padding: 8px; cursor: pointer;
-            transition: background 0.2s; display: flex; flex-direction: column; gap: 4px;
-            overflow: hidden; /* 영역 밖으로 나가는 것 방지 */
+            transition: background 0.2s; display: flex; flex-direction: column; gap: 4px; overflow: hidden;
         }
         .day-cell:hover { background: #f9f9fa; }
         .day-cell.drag-over { background-color: var(--highlight-color) !important; }
         
-        /* 오늘 날짜 하이라이트 스타일 (정렬 해치지 않는 포인트 디자인) */
-        .day-number { 
-            font-size: 14px; margin-bottom: 5px; color: var(--text-muted); 
-            display: flex; align-items: center; 
-        }
+        .day-number { font-size: 14px; margin-bottom: 5px; color: var(--text-muted); display: flex; align-items: center; }
         .day-number.today { color: var(--primary); font-weight: 800; }
         .day-number.today::before {
             content: ''; display: inline-block; width: 4px; height: 13px;
@@ -70,21 +63,19 @@
         .day-view-container { background: white; border: 1px solid var(--border-color); border-radius: 8px; padding: 20px; min-height: 400px; position: relative;}
         .empty-placeholder { color: #aaa; text-align: center; padding: 40px; font-size: 14px; }
 
-        /* 투두 아이템 (말줄임표 적용) */
         .todo-item {
             font-size: 12px; padding: 4px 8px; border-radius: 4px; display: flex; align-items: center; gap: 6px;
             color: #333; background: rgba(0,0,0,0.05); border-left: 4px solid var(--gray-default);
-            cursor: grab; box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-            overflow: hidden; /* Flex 컨테이너 내 말줄임표 필수 */
+            cursor: grab; box-shadow: 0 1px 3px rgba(0,0,0,0.1); overflow: hidden;
         }
         .todo-item.completed span { text-decoration: line-through; opacity: 0.5; }
         .todo-item input[type="checkbox"] { margin: 0; cursor: pointer; accent-color: var(--primary); flex-shrink: 0; }
         .todo-item span {
             white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-            flex-grow: 1; min-width: 0; /* 글자 넘어갈 때 ... 처리 */
+            flex-grow: 1; min-width: 0; cursor: pointer; /* 클릭 가능 커서 */
         }
+        .todo-item span:hover { text-decoration: underline; opacity: 0.8; }
 
-        /* 카테고리 보드 뷰 (말줄임표 적용) */
         .board-view { display: flex; gap: 20px; overflow-x: auto; padding-bottom: 20px; align-items: flex-start; }
         .board-column { background: #f9f9fa; border-radius: 12px; width: 300px; min-width: 300px; padding: 15px; display: flex; flex-direction: column; gap: 10px; border: 1px solid var(--border-color); }
         .board-column.drag-over { background: var(--highlight-color); border: 2px dashed var(--primary); }
@@ -101,12 +92,12 @@
         }
         .board-card.completed .card-title { text-decoration: line-through; color: var(--text-muted); }
         .board-card input[type="checkbox"] { margin-top: 3px; width: 16px; height: 16px; cursor: pointer; accent-color: var(--primary); flex-shrink: 0;}
-        .card-content { flex-grow: 1; display: flex; flex-direction: column; gap: 6px; min-width: 0; /* 말줄임표 필수 */ }
-        .card-title { font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .card-content { flex-grow: 1; display: flex; flex-direction: column; gap: 6px; min-width: 0; cursor: pointer; }
+        .card-content:hover .card-title { color: var(--primary); }
+        .card-title { font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; transition: 0.2s;}
         .card-meta { display: flex; gap: 8px; font-size: 11px; color: var(--text-muted); align-items: center; }
         .meta-badge { background: #f0f0f0; padding: 2px 6px; border-radius: 4px; display: inline-flex; align-items: center; gap: 4px;}
         
-        /* 모달 공통 */
         .modal-overlay {
             position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.4);
             display: flex; justify-content: center; align-items: center;
@@ -118,7 +109,6 @@
         .modal-header h2 { margin: 0; font-size: 18px; }
         .close-btn { background: none; border: none; font-size: 24px; cursor: pointer; color: var(--text-muted); }
 
-        /* 미니멀 투두 추가 폼 */
         .minimal-form { display: flex; flex-direction: column; gap: 15px; }
         .category-select-always {
             padding: 10px; border: 1px solid var(--border-color); border-radius: 8px;
@@ -134,11 +124,11 @@
         .hidden-input.active { display: flex; flex-direction: column; gap: 5px; }
         .hidden-input input { padding: 8px; border: 1px solid var(--border-color); border-radius: 6px; width: 100%; }
         
-        .submit-btn {
-            background: var(--primary); color: white; border: none; padding: 12px;
-            border-radius: 8px; font-weight: bold; cursor: pointer; margin-top: 10px; font-size: 15px;
-        }
+        .modal-action-btns { display: flex; gap: 10px; margin-top: 10px; }
+        .submit-btn { background: var(--primary); color: white; border: none; padding: 12px; border-radius: 8px; font-weight: bold; cursor: pointer; font-size: 15px; flex-grow: 1; }
         .submit-btn:hover { background: #3367d6; }
+        .delete-btn { background: var(--danger); color: white; border: none; padding: 12px 20px; border-radius: 8px; font-weight: bold; cursor: pointer; font-size: 15px; display: none; }
+        .delete-btn:hover { background: #e04345; }
 
         .palette-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; margin-top: 10px; }
         .color-swatch { width: 100%; aspect-ratio: 1; border-radius: 8px; cursor: pointer; border: 2px solid transparent; transition: transform 0.1s; }
@@ -200,7 +190,10 @@
             <div id="timeSection" class="hidden-input"><input type="time" id="todoTime"></div>
             <div id="dateSection" class="hidden-input"><input type="date" id="todoDate"></div>
 
-            <button class="submit-btn" onclick="saveTodo()">저장하기</button>
+            <div class="modal-action-btns">
+                <button class="delete-btn" id="deleteTodoBtn" onclick="deleteTodo()">삭제</button>
+                <button class="submit-btn" id="saveTodoBtn" onclick="saveTodo()">저장하기</button>
+            </div>
         </div>
     </div>
 </div>
@@ -230,6 +223,7 @@
     let targetDate = new Date();
     let draggedTodoId = null;
     let editingCategoryId = null;
+    let editingTodoId = null; // 현재 수정 중인 할 일 ID 추적
 
     let todos = JSON.parse(localStorage.getItem('myPremiumTodos')) || [];
     let categories = JSON.parse(localStorage.getItem('myPremiumCategories')) || [
@@ -250,7 +244,6 @@
         return cat ? cat.color : 'var(--gray-default)';
     }
 
-    // 시차(KST) 버그를 막기 위한 안전한 날짜 포맷 함수
     function formatDateForInput(dateObj) {
         const y = dateObj.getFullYear();
         const m = String(dateObj.getMonth() + 1).padStart(2, '0');
@@ -258,7 +251,6 @@
         return `${y}-${m}-${d}`;
     }
 
-    // 오늘 날짜 문자열
     const todayStr = formatDateForInput(new Date());
 
     document.querySelectorAll('.nav-btn').forEach(btn => {
@@ -314,13 +306,10 @@
         cell.className = 'day-cell';
         cell.dataset.date = dateStr;
 
-        // label이 있을 때만 날짜 숫자 생성 (일간 뷰에서는 라벨을 없애기 위함)
         if (label) {
             const dayNum = document.createElement('div');
             dayNum.className = 'day-number';
-            if (dateStr === todayStr) {
-                dayNum.classList.add('today'); // 파란 막대기 생성용 클래스 추가
-            }
+            if (dateStr === todayStr) dayNum.classList.add('today');
             dayNum.textContent = label;
             cell.appendChild(dayNum);
         }
@@ -334,9 +323,10 @@
             item.draggable = true;
             item.dataset.id = todo.id;
             
+            // 텍스트 영역에 클릭(수정) 이벤트 추가
             item.innerHTML = `
-                <input type="checkbox" ${todo.completed ? 'checked' : ''} onchange="toggleComplete('${todo.id}')">
-                <span>${todo.time ? `[${todo.time}] ` : ''}${todo.title}</span>
+                <input type="checkbox" ${todo.completed ? 'checked' : ''} onchange="toggleComplete('${todo.id}', event)">
+                <span onclick="editTodo('${todo.id}', event)">${todo.time ? `[${todo.time}] ` : ''}${todo.title}</span>
             `;
 
             item.addEventListener('dragstart', (e) => {
@@ -357,7 +347,7 @@
             if (draggedTodoId) updateTodoProp(draggedTodoId, 'date', dateStr);
         });
         
-        // 빈 공간 클릭 시 해당 날짜로 추가
+        // 셀 빈공간 클릭 시 추가 모달 열기
         cell.addEventListener('click', e => {
             if(e.target === cell || e.target.closest('.day-number') || e.target.classList.contains('empty-placeholder')) {
                 openTodoModal(dateStr); 
@@ -398,18 +388,13 @@
     function renderDayView(dateStr) {
         const container = document.getElementById('dayContainer');
         container.innerHTML = '';
-        
-        // 일간 뷰에서는 날짜 라벨('')을 숨겨 깔끔하게 처리
         const cell = createCalendarCell(dateStr, '');
-        
-        // 할 일이 없을 때만 안내 문구 표시
         if(todos.filter(t => t.date === dateStr).length === 0) {
             const placeholder = document.createElement('div');
             placeholder.className = 'empty-placeholder';
             placeholder.textContent = '이곳을 클릭하거나 우측 하단 + 버튼을 눌러 추가하세요.';
             cell.appendChild(placeholder);
         }
-        
         cell.style.minHeight = '300px';
         cell.style.border = 'none';
         container.appendChild(cell);
@@ -454,9 +439,10 @@
                     dateTag = `${d.getMonth()+1}월 ${d.getDate()}일`;
                 }
 
+                // 텍스트(card-content) 부분 클릭 시 수정 이벤트 추가
                 card.innerHTML = `
-                    <input type="checkbox" ${todo.completed ? 'checked' : ''} onchange="toggleComplete('${todo.id}')">
-                    <div class="card-content">
+                    <input type="checkbox" ${todo.completed ? 'checked' : ''} onchange="toggleComplete('${todo.id}', event)">
+                    <div class="card-content" onclick="editTodo('${todo.id}', event)">
                         <div class="card-title">${todo.title}</div>
                         <div class="card-meta">
                             <span class="meta-badge">📅 ${dateTag}</span>
@@ -485,7 +471,9 @@
         });
     }
 
-    function toggleComplete(id) {
+    // 완료 체크 (수정 모달 뜨지 않도록 이벤트 버블링 방지)
+    function toggleComplete(id, event) {
+        if(event) event.stopPropagation();
         const todo = todos.find(t => t.id === id);
         if (todo) { todo.completed = !todo.completed; saveData(); renderView(); }
     }
@@ -498,56 +486,111 @@
         }
     }
 
+    // ---- 모달 (추가 및 수정) 로직 ----
+
+    // 할 일 '추가' 모달 열기
     function openTodoModal(dateStr = '', catId = null) {
+        editingTodoId = null; // 수정 모드 초기화
+        
+        document.getElementById('todoModalTitle').textContent = '새 할 일 추가';
+        document.getElementById('saveTodoBtn').textContent = '저장하고 계속 추가하기';
+        document.getElementById('deleteTodoBtn').style.display = 'none'; // 삭제 버튼 숨김
+
         const titleInput = document.getElementById('todoTitle');
         titleInput.value = '';
         document.getElementById('todoTime').value = '';
-        
-        // 날짜가 안 넘어왔다면 기본값 오늘 날짜
         document.getElementById('todoDate').value = dateStr || todayStr;
         
         const select = document.getElementById('todoCategorySelect');
         select.innerHTML = '<option value="">미지정 (카테고리 없음)</option>';
-        categories.forEach(cat => {
-            select.innerHTML += `<option value="${cat.id}">${cat.name}</option>`;
-        });
-
-        if (catId !== null) {
-            select.value = catId;
-        } else {
-            select.value = ""; 
-        }
+        categories.forEach(cat => { select.innerHTML += `<option value="${cat.id}">${cat.name}</option>`; });
+        select.value = catId !== null ? catId : ""; 
 
         document.querySelectorAll('.hidden-input').forEach(el => el.classList.remove('active'));
         document.getElementById('todoModal').classList.add('active');
         setTimeout(() => titleInput.focus(), 100);
     }
 
+    // 할 일 '수정' 모달 열기
+    function editTodo(id, event) {
+        if(event) event.stopPropagation(); // 클릭 이벤트 부모 전달 방지
+        const todo = todos.find(t => t.id === id);
+        if (!todo) return;
+
+        editingTodoId = id; // 현재 수정 중인 ID 저장
+        
+        document.getElementById('todoModalTitle').textContent = '할 일 수정';
+        document.getElementById('saveTodoBtn').textContent = '수정 완료';
+        document.getElementById('deleteTodoBtn').style.display = 'block'; // 삭제 버튼 표시
+
+        document.getElementById('todoTitle').value = todo.title;
+        document.getElementById('todoDate').value = todo.date || todayStr;
+        document.getElementById('todoTime').value = todo.time || '';
+        
+        const select = document.getElementById('todoCategorySelect');
+        select.innerHTML = '<option value="">미지정 (카테고리 없음)</option>';
+        categories.forEach(cat => { select.innerHTML += `<option value="${cat.id}">${cat.name}</option>`; });
+        select.value = todo.categoryId || ""; 
+
+        // 시간이나 날짜 데이터가 있으면 해당 입력창 미리 열어두기
+        if (todo.time) document.getElementById('timeSection').classList.add('active');
+        else document.getElementById('timeSection').classList.remove('active');
+        document.getElementById('dateSection').classList.remove('active');
+
+        document.getElementById('todoModal').classList.add('active');
+        setTimeout(() => document.getElementById('todoTitle').focus(), 100);
+    }
+
     function toggleInput(sectionId) {
         document.getElementById(sectionId).classList.toggle('active');
     }
 
+    // 저장 및 업데이트 로직 
     function saveTodo() {
         const titleInput = document.getElementById('todoTitle');
         const title = titleInput.value.trim();
-        if (!title) return; // 내용이 없으면 경고 없이 무시 (엔터 연타 방지)
+        if (!title) return;
 
-        const newTodo = {
-            id: 't_' + Date.now(),
-            title: title,
-            date: document.getElementById('todoDate').value || todayStr,
-            time: document.getElementById('todoTime').value || null,
-            categoryId: document.getElementById('todoCategorySelect').value || null,
-            completed: false
-        };
+        if (editingTodoId) {
+            // [수정 모드] 기존 데이터 덮어쓰기
+            const todo = todos.find(t => t.id === editingTodoId);
+            if (todo) {
+                todo.title = title;
+                todo.date = document.getElementById('todoDate').value || todayStr;
+                todo.time = document.getElementById('todoTime').value || null;
+                todo.categoryId = document.getElementById('todoCategorySelect').value || null;
+            }
+            saveData();
+            renderView();
+            closeModal('todoModal'); // 수정 완료 시 창 닫기
+        } else {
+            // [추가 모드] 새 데이터 생성
+            const newTodo = {
+                id: 't_' + Date.now(),
+                title: title,
+                date: document.getElementById('todoDate').value || todayStr,
+                time: document.getElementById('todoTime').value || null,
+                categoryId: document.getElementById('todoCategorySelect').value || null,
+                completed: false
+            };
+            todos.push(newTodo);
+            saveData();
+            renderView();
+            // 연속 추가를 위해 창 유지 및 제목만 비움
+            titleInput.value = '';
+            titleInput.focus();
+        }
+    }
 
-        todos.push(newTodo);
-        saveData();
-        renderView();
-
-        // 입력창 비우고 포커스 유지 (연속 입력 지원)
-        titleInput.value = '';
-        titleInput.focus();
+    // 삭제 로직
+    function deleteTodo() {
+        if (!editingTodoId) return;
+        if(confirm('이 할 일을 삭제하시겠습니까?')) {
+            todos = todos.filter(t => t.id !== editingTodoId);
+            saveData();
+            renderView();
+            closeModal('todoModal');
+        }
     }
 
     let selectedColor = '';
