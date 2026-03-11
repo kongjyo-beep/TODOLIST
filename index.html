@@ -200,4 +200,521 @@
         .card-content { flex-grow: 1; display: flex; flex-direction: column; gap: 6px; }
         .card-title { font-size: 14px; word-break: break-all; }
         .card-meta { display: flex; gap: 8px; font-size: 11px; color: var(--text-muted); align-items: center; }
-        .meta-badge { background: #f0f0f0; padding: 2px 6px; border-radius: 4px; display:
+        .meta-badge { background: #f0f0f0; padding: 2px 6px; border-radius: 4px; display: inline-flex; align-items: center; gap: 4px;}
+        
+        /* 모달 공통 */
+        .modal-overlay {
+            position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.4);
+            display: flex; justify-content: center; align-items: center;
+            visibility: hidden; opacity: 0; transition: 0.2s; z-index: 100;
+        }
+        .modal-overlay.active { visibility: visible; opacity: 1; }
+        .modal-content {
+            background: white; width: 400px; border-radius: 12px; padding: 24px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+        }
+        .modal-header {
+            display: flex; justify-content: space-between; align-items: center;
+            margin-bottom: 20px;
+        }
+        .modal-header h2 { margin: 0; font-size: 18px; }
+        .close-btn { background: none; border: none; font-size: 24px; cursor: pointer; color: var(--text-muted); }
+
+        /* 미니멀 투두 추가 폼 */
+        .minimal-form { display: flex; flex-direction: column; gap: 15px; }
+        .title-input {
+            width: 100%; border: none; border-bottom: 2px solid var(--primary);
+            font-size: 18px; padding: 8px 0; outline: none; background: transparent;
+        }
+        .form-toggles { display: flex; gap: 10px; }
+        .toggle-btn {
+            background: #f0f0f0; border: none; padding: 6px 12px; border-radius: 20px;
+            font-size: 13px; cursor: pointer; display: flex; align-items: center; gap: 6px;
+        }
+        .toggle-btn:hover { background: #e0e0e0; }
+        .hidden-input { display: none; margin-top: 10px; }
+        .hidden-input.active { display: flex; flex-direction: column; gap: 5px; }
+        .hidden-input input, .hidden-input select {
+            padding: 8px; border: 1px solid var(--border-color); border-radius: 6px; width: 100%;
+        }
+        .submit-btn {
+            background: var(--primary); color: white; border: none; padding: 10px;
+            border-radius: 8px; font-weight: bold; cursor: pointer; margin-top: 10px;
+        }
+        .submit-btn:hover { background: #3367d6; }
+
+        /* 색상 팔레트 그리드 */
+        .palette-grid {
+            display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; margin-top: 10px;
+        }
+        .color-swatch {
+            width: 100%; aspect-ratio: 1; border-radius: 8px; cursor: pointer;
+            border: 2px solid transparent; transition: transform 0.1s;
+        }
+        .color-swatch:hover { transform: scale(1.1); }
+        .color-swatch.selected { border-color: #333; transform: scale(1.1); }
+        
+        .cat-input { width: 100%; padding: 10px; border: 1px solid var(--border-color); border-radius: 6px; margin-bottom: 15px;}
+        
+        /* 플로팅 추가 버튼 (+ 버튼) */
+        .fab {
+            position: fixed; bottom: 30px; right: 30px;
+            width: 56px; height: 56px; border-radius: 50%;
+            background: var(--primary); color: white; border: none;
+            font-size: 30px; display: flex; justify-content: center; align-items: center;
+            cursor: pointer; box-shadow: 0 4px 12px rgba(66, 133, 244, 0.4); transition: 0.2s;
+        }
+        .fab:hover { transform: scale(1.05); }
+
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div class="top-nav">
+        <button class="nav-btn" data-view="day">일</button>
+        <button class="nav-btn" data-view="week">주</button>
+        <button class="nav-btn active" data-view="month">월</button>
+        <button class="nav-btn" data-view="category">카테고리별</button>
+    </div>
+
+    <div class="header">
+        <button id="prevBtn">&lt; 이전</button>
+        <h1 id="dateTitle">2026년 3월</h1>
+        <button id="nextBtn">다음 &gt;</button>
+    </div>
+    
+    <div id="monthView" class="view-area active">
+        <div class="calendar-grid" id="monthGrid"></div>
+    </div>
+
+    <div id="weekView" class="view-area">
+        <div class="calendar-grid" id="weekGrid"></div>
+    </div>
+
+    <div id="dayView" class="view-area">
+        <div class="day-view-container" id="dayContainer"></div>
+    </div>
+
+    <div id="categoryView" class="view-area">
+        <div class="board-view" id="boardContainer"></div>
+    </div>
+</div>
+
+<button class="fab" onclick="openTodoModal()">+</button>
+
+<div class="modal-overlay" id="todoModal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2 id="todoModalTitle">할 일 추가</h2>
+            <button class="close-btn" onclick="closeModal('todoModal')">&times;</button>
+        </div>
+        <div class="minimal-form">
+            <input type="text" id="todoTitle" class="title-input" placeholder="새로운 할 일 입력..." autofocus>
+            
+            <div class="form-toggles">
+                <button class="toggle-btn" onclick="toggleInput('timeSection')">⏰ 시간</button>
+                <button class="toggle-btn" onclick="toggleInput('dateSection')">📅 날짜</button>
+                <button class="toggle-btn" onclick="toggleInput('catSection')">📁 카테고리</button>
+            </div>
+
+            <div id="timeSection" class="hidden-input"><input type="time" id="todoTime"></div>
+            <div id="dateSection" class="hidden-input"><input type="date" id="todoDate"></div>
+            <div id="catSection" class="hidden-input"><select id="todoCategorySelect"></select></div>
+
+            <button class="submit-btn" onclick="saveTodo()">저장하기</button>
+        </div>
+    </div>
+</div>
+
+<div class="modal-overlay" id="categoryModal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2>카테고리 설정</h2>
+            <button class="close-btn" onclick="closeModal('categoryModal')">&times;</button>
+        </div>
+        <input type="text" id="catEditName" class="cat-input" placeholder="카테고리 이름 (예: SDA)">
+        <p style="font-size: 12px; margin: 0 0 10px 0; color: #888;">색상 선택 (파스텔 톤 20종)</p>
+        <div class="palette-grid" id="colorPalette"></div>
+        <button class="submit-btn" style="width: 100%; margin-top: 20px;" onclick="saveCategory()">변경사항 저장</button>
+    </div>
+</div>
+
+<script>
+    // --- 1. 데이터 및 상태 관리 ---
+    const PASTEL_COLORS = [
+        '#FFB3BA', '#FFDFBA', '#FFFFBA', '#BAFFC9', '#BAE1FF', 
+        '#E2B6FF', '#FFC6FF', '#FDFD96', '#FDF2B6', '#C1E1C1', 
+        '#A8E6CF', '#A2C2E6', '#B3CEE5', '#D0A3FF', '#C8B6FF', 
+        '#E7FFAC', '#FFD6A5', '#FDFFB6', '#CAFFBF', '#9BF6FF'
+    ];
+    
+    let currentView = 'month'; // 'day', 'week', 'month', 'category'
+    let targetDate = new Date(); // 현재 보고 있는 기준 날짜
+    let draggedTodoId = null;
+    let editingCategoryId = null;
+
+    // 로컬 스토리지 데이터 로드
+    let todos = JSON.parse(localStorage.getItem('myPremiumTodos')) || [];
+    let categories = JSON.parse(localStorage.getItem('myPremiumCategories')) || [
+        { id: 'cat_sda', name: 'SDA', color: '#B3CEE5' },
+        { id: 'cat_ale', name: '에일', color: '#FFB3BA' },
+        { id: 'cat_nike', name: '니케', color: '#BAFFC9' },
+        { id: 'cat_btw', name: 'BTW', color: '#FFDFBA' }
+    ];
+
+    // --- 2. 기본 유틸리티 함수 ---
+    function saveData() {
+        localStorage.setItem('myPremiumTodos', JSON.stringify(todos));
+        localStorage.setItem('myPremiumCategories', JSON.stringify(categories));
+    }
+
+    function getCategoryColor(catId) {
+        if (!catId) return 'var(--gray-default)';
+        const cat = categories.find(c => c.id === catId);
+        return cat ? cat.color : 'var(--gray-default)';
+    }
+    function getCategoryName(catId) {
+        if (!catId) return '미지정';
+        const cat = categories.find(c => c.id === catId);
+        return cat ? cat.name : '미지정';
+    }
+
+    function formatDateForInput(dateObj) {
+        const y = dateObj.getFullYear();
+        const m = String(dateObj.getMonth() + 1).padStart(2, '0');
+        const d = String(dateObj.getDate()).padStart(2, '0');
+        return `${y}-${m}-${d}`;
+    }
+
+    // --- 3. 네비게이션 및 헤더 컨트롤 ---
+    document.querySelectorAll('.nav-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+            e.target.classList.add('active');
+            currentView = e.target.dataset.view;
+            
+            document.querySelectorAll('.view-area').forEach(v => v.classList.remove('active'));
+            document.getElementById(`${currentView}View`).classList.add('active');
+            
+            renderView();
+        });
+    });
+
+    document.getElementById('prevBtn').addEventListener('click', () => changeDate(-1));
+    document.getElementById('nextBtn').addEventListener('click', () => changeDate(1));
+
+    function changeDate(dir) {
+        if (currentView === 'month') targetDate.setMonth(targetDate.getMonth() + dir);
+        if (currentView === 'week') targetDate.setDate(targetDate.getDate() + (dir * 7));
+        if (currentView === 'day') targetDate.setDate(targetDate.getDate() + dir);
+        // 카테고리 뷰는 날짜 이동 없음
+        renderView();
+    }
+
+    // --- 4. 렌더링 코어 로직 ---
+    function renderView() {
+        const titleEl = document.getElementById('dateTitle');
+        const y = targetDate.getFullYear();
+        const m = targetDate.getMonth();
+        const d = targetDate.getDate();
+
+        if (currentView === 'month') {
+            titleEl.textContent = `${y}년 ${m + 1}월`;
+            renderMonthGrid(y, m);
+        } else if (currentView === 'week') {
+            // 해당 주의 일요일 찾기
+            const weekStart = new Date(targetDate);
+            weekStart.setDate(d - targetDate.getDay());
+            const weekEnd = new Date(weekStart);
+            weekEnd.setDate(weekStart.getDate() + 6);
+            titleEl.textContent = `${weekStart.getMonth()+1}월 ${weekStart.getDate()}일 - ${weekEnd.getMonth()+1}월 ${weekEnd.getDate()}일`;
+            renderWeekGrid(weekStart);
+        } else if (currentView === 'day') {
+            titleEl.textContent = `${y}년 ${m + 1}월 ${d}일`;
+            renderDayView(formatDateForInput(targetDate));
+        } else if (currentView === 'category') {
+            titleEl.textContent = '프로젝트 보드';
+            renderCategoryBoard();
+        }
+    }
+
+    // 4-1. 캘린더 공통 생성 로직 (드래그 앤 드롭 포함)
+    function createCalendarCell(dateStr, label) {
+        const cell = document.createElement('div');
+        cell.className = 'day-cell';
+        cell.dataset.date = dateStr;
+
+        const dayNum = document.createElement('div');
+        dayNum.className = 'day-number';
+        dayNum.textContent = label;
+        cell.appendChild(dayNum);
+
+        // 해당 날짜 투두 필터링
+        const dayTodos = todos.filter(t => t.date === dateStr).sort((a, b) => (a.time||'').localeCompare(b.time||''));
+        
+        dayTodos.forEach(todo => {
+            const item = document.createElement('div');
+            item.className = `todo-item ${todo.completed ? 'completed' : ''}`;
+            item.style.borderLeftColor = getCategoryColor(todo.categoryId);
+            item.draggable = true;
+            item.dataset.id = todo.id;
+            
+            item.innerHTML = `
+                <input type="checkbox" ${todo.completed ? 'checked' : ''} onchange="toggleComplete('${todo.id}')">
+                <span>${todo.time ? `[${todo.time}] ` : ''}${todo.title}</span>
+            `;
+
+            // 드래그 이벤트 (캘린더 뷰 공통)
+            item.addEventListener('dragstart', (e) => {
+                e.stopPropagation(); draggedTodoId = todo.id; item.style.opacity = '0.5';
+            });
+            item.addEventListener('dragend', () => {
+                draggedTodoId = null; item.style.opacity = '1';
+                document.querySelectorAll('.day-cell').forEach(c => c.classList.remove('drag-over'));
+            });
+
+            cell.appendChild(item);
+        });
+
+        // 드롭존 이벤트
+        cell.addEventListener('dragover', e => { e.preventDefault(); cell.classList.add('drag-over'); });
+        cell.addEventListener('dragleave', () => cell.classList.remove('drag-over'));
+        cell.addEventListener('drop', e => {
+            e.preventDefault(); cell.classList.remove('drag-over');
+            if (draggedTodoId) updateTodoProp(draggedTodoId, 'date', dateStr);
+        });
+        
+        // 셀 빈공간 클릭시 해당 날짜로 추가 모달 띄우기
+        cell.addEventListener('click', e => {
+            if(e.target === cell || e.target.classList.contains('day-number')) {
+                openTodoModal(dateStr);
+            }
+        });
+
+        return cell;
+    }
+
+    // 4-2. 월간 뷰
+    function renderMonthGrid(year, month) {
+        const grid = document.getElementById('monthGrid');
+        grid.innerHTML = '<div class="weekday">일</div><div class="weekday">월</div><div class="weekday">화</div><div class="weekday">수</div><div class="weekday">목</div><div class="weekday">금</div><div class="weekday">토</div>';
+        
+        const firstDay = new Date(year, month, 1).getDay();
+        const daysInMonth = new Date(year, month + 1, 0).getDate();
+
+        for (let i = 0; i < firstDay; i++) {
+            let empty = document.createElement('div'); empty.className = 'day-cell'; empty.style.background = '#fafafa'; grid.appendChild(empty);
+        }
+        for (let day = 1; day <= daysInMonth; day++) {
+            const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+            grid.appendChild(createCalendarCell(dateStr, day));
+        }
+    }
+
+    // 4-3. 주간 뷰
+    function renderWeekGrid(weekStart) {
+        const grid = document.getElementById('weekGrid');
+        grid.innerHTML = '<div class="weekday">일</div><div class="weekday">월</div><div class="weekday">화</div><div class="weekday">수</div><div class="weekday">목</div><div class="weekday">금</div><div class="weekday">토</div>';
+        
+        for (let i = 0; i < 7; i++) {
+            const current = new Date(weekStart);
+            current.setDate(current.getDate() + i);
+            const dateStr = formatDateForInput(current);
+            grid.appendChild(createCalendarCell(dateStr, `${current.getMonth()+1}/${current.getDate()}`));
+        }
+    }
+
+    // 4-4. 일간 뷰
+    function renderDayView(dateStr) {
+        const container = document.getElementById('dayContainer');
+        container.innerHTML = '';
+        const cell = createCalendarCell(dateStr, '이곳을 클릭하거나 + 버튼을 눌러 할 일을 추가하세요.');
+        cell.style.minHeight = '300px';
+        container.appendChild(cell);
+    }
+
+    // 4-5. 카테고리 보드 뷰 (칸반 형태)
+    function renderCategoryBoard() {
+        const board = document.getElementById('boardContainer');
+        board.innerHTML = '';
+
+        // 카테고리 목록 + '미지정' 생성
+        const viewCategories = [...categories, { id: null, name: '미지정 (카테고리 없음)', color: 'var(--gray-default)' }];
+
+        viewCategories.forEach(cat => {
+            const col = document.createElement('div');
+            col.className = 'board-column';
+            col.dataset.categoryId = cat.id || 'null'; // 드롭 타겟 인식용
+
+            // 컬럼 헤더 세팅
+            const header = document.createElement('div');
+            header.className = 'board-header';
+            header.innerHTML = `
+                <div class="board-header-left">
+                    <div class="color-square" style="background:${cat.color}"></div>
+                    <span>${cat.name}</span>
+                </div>
+                ${cat.id ? `<button class="settings-btn" onclick="openCategoryModal('${cat.id}')">⚙️</button>` : ''}
+            `;
+            col.appendChild(header);
+
+            // 해당 카테고리 투두 필터링 (미지정은 id가 없거나 categories 배열에 없는 경우)
+            const catTodos = todos.filter(t => cat.id ? t.categoryId === cat.id : !t.categoryId || !categories.find(c=>c.id === t.categoryId));
+
+            catTodos.forEach(todo => {
+                const card = document.createElement('div');
+                card.className = `board-card ${todo.completed ? 'completed' : ''}`;
+                card.draggable = true;
+                
+                // 표시할 날짜 포맷 (예: 3월 23일)
+                let dateTag = '날짜 없음';
+                if(todo.date) {
+                    const d = new Date(todo.date);
+                    dateTag = `${d.getMonth()+1}월 ${d.getDate()}일`;
+                }
+
+                card.innerHTML = `
+                    <input type="checkbox" ${todo.completed ? 'checked' : ''} onchange="toggleComplete('${todo.id}')">
+                    <div class="card-content">
+                        <div class="card-title">${todo.title}</div>
+                        <div class="card-meta">
+                            <span class="meta-badge">📅 ${dateTag}</span>
+                            ${todo.time ? `<span class="meta-badge">⏰ ${todo.time}</span>` : ''}
+                        </div>
+                    </div>
+                `;
+
+                // 드래그 앤 드롭 (보드 카드)
+                card.addEventListener('dragstart', (e) => { e.stopPropagation(); draggedTodoId = todo.id; card.style.opacity = '0.5'; });
+                card.addEventListener('dragend', () => { draggedTodoId = null; card.style.opacity = '1'; document.querySelectorAll('.board-column').forEach(c => c.classList.remove('drag-over')); });
+                
+                col.appendChild(card);
+            });
+
+            // 보드 컬럼 드롭존
+            col.addEventListener('dragover', e => { e.preventDefault(); col.classList.add('drag-over'); });
+            col.addEventListener('dragleave', () => col.classList.remove('drag-over'));
+            col.addEventListener('drop', e => {
+                e.preventDefault(); col.classList.remove('drag-over');
+                if (draggedTodoId) {
+                    const targetCatId = col.dataset.categoryId === 'null' ? null : col.dataset.categoryId;
+                    updateTodoProp(draggedTodoId, 'categoryId', targetCatId);
+                }
+            });
+
+            board.appendChild(col);
+        });
+    }
+
+    // --- 5. 상태 업데이트 로직 ---
+    function toggleComplete(id) {
+        const todo = todos.find(t => t.id === id);
+        if (todo) { todo.completed = !todo.completed; saveData(); renderView(); }
+    }
+    
+    // 드래그앤드롭으로 속성(날짜 또는 카테고리) 변경
+    function updateTodoProp(todoId, prop, value) {
+        const todo = todos.find(t => t.id === todoId);
+        if (todo && todo[prop] !== value) {
+            todo[prop] = value;
+            saveData(); renderView();
+        }
+    }
+
+    // --- 6. 모달 UI 및 폼 컨트롤 ---
+    function openTodoModal(dateStr = '') {
+        document.getElementById('todoTitle').value = '';
+        document.getElementById('todoTime').value = '';
+        document.getElementById('todoDate').value = dateStr || formatDateForInput(targetDate);
+        
+        // 카테고리 셀렉트 렌더링
+        const select = document.getElementById('todoCategorySelect');
+        select.innerHTML = '<option value="">미지정</option>';
+        categories.forEach(cat => {
+            select.innerHTML += `<option value="${cat.id}">${cat.name}</option>`;
+        });
+
+        // 숨김 필드 초기화
+        document.querySelectorAll('.hidden-input').forEach(el => el.classList.remove('active'));
+        
+        document.getElementById('todoModal').classList.add('active');
+        document.getElementById('todoTitle').focus();
+    }
+
+    function toggleInput(sectionId) {
+        document.getElementById(sectionId).classList.toggle('active');
+    }
+
+    function saveTodo() {
+        const title = document.getElementById('todoTitle').value.trim();
+        if (!title) return alert('할 일을 입력하세요.');
+
+        const newTodo = {
+            id: 't_' + Date.now(),
+            title: title,
+            date: document.getElementById('todoDate').value || null,
+            time: document.getElementById('todoTime').value || null,
+            categoryId: document.getElementById('todoCategorySelect').value || null,
+            completed: false
+        };
+
+        todos.push(newTodo);
+        saveData();
+        closeModal('todoModal');
+        renderView();
+    }
+
+    // --- 7. 카테고리 관리 기능 ---
+    let selectedColor = '';
+    
+    function openCategoryModal(catId) {
+        editingCategoryId = catId;
+        const cat = categories.find(c => c.id === catId);
+        
+        document.getElementById('catEditName').value = cat ? cat.name : '';
+        selectedColor = cat ? cat.color : PASTEL_COLORS[0];
+        
+        // 색상 팔레트 생성
+        const palette = document.getElementById('colorPalette');
+        palette.innerHTML = '';
+        PASTEL_COLORS.forEach(color => {
+            const swatch = document.createElement('div');
+            swatch.className = `color-swatch ${color === selectedColor ? 'selected' : ''}`;
+            swatch.style.backgroundColor = color;
+            swatch.onclick = () => {
+                document.querySelectorAll('.color-swatch').forEach(s => s.classList.remove('selected'));
+                swatch.classList.add('selected');
+                selectedColor = color;
+            };
+            palette.appendChild(swatch);
+        });
+
+        document.getElementById('categoryModal').classList.add('active');
+    }
+
+    function saveCategory() {
+        const name = document.getElementById('catEditName').value.trim();
+        if(!name) return alert('카테고리 이름을 입력하세요.');
+
+        const cat = categories.find(c => c.id === editingCategoryId);
+        if (cat) {
+            cat.name = name;
+            cat.color = selectedColor;
+        }
+        saveData();
+        closeModal('categoryModal');
+        renderView(); // 보드 뷰 및 캘린더 색상 즉시 업데이트
+    }
+
+    function closeModal(modalId) {
+        document.getElementById(modalId).classList.remove('active');
+    }
+
+    // 초기 실행
+    renderView();
+
+</script>
+</body>
+</html>
