@@ -153,7 +153,8 @@
         .archive-btn { background: var(--warning); color: white; border: none; padding: 12px 16px; border-radius: 8px; font-weight: bold; cursor: pointer; font-size: 14px; display: none; }
         .archive-btn:hover { background: #d48806; }
 
-        .palette-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; margin-top: 10px; }
+        /* 팔레트 그리드를 4열로 수정 */
+        .palette-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-top: 10px; }
         .color-swatch { width: 100%; aspect-ratio: 1; border-radius: 8px; cursor: pointer; border: 2px solid transparent; transition: transform 0.1s; }
         .color-swatch:hover { transform: scale(1.1); }
         .color-swatch.selected { border-color: #333; transform: scale(1.1); }
@@ -231,7 +232,7 @@
             <button class="close-btn" onclick="closeModal('categoryModal')">&times;</button>
         </div>
         <input type="text" id="catEditName" class="cat-input" placeholder="카테고리 이름 (예: SDA)">
-        <p style="font-size: 12px; margin: 0 0 10px 0; color: #888;">색상 선택 (파스텔 톤 20종)</p>
+        <p style="font-size: 12px; margin: 0 0 10px 0; color: #888;">색상 선택 (파스텔 톤 16종)</p>
         <div class="palette-grid" id="colorPalette"></div>
         <div class="modal-action-btns" style="margin-top: 20px;">
             <button class="delete-btn" id="deleteCatBtn" onclick="deleteCategory()">삭제</button>
@@ -241,11 +242,12 @@
 </div>
 
 <script>
+    // 새롭게 적용된 16가지 파스텔 색상 팔레트
     const PASTEL_COLORS = [
-        '#FFB3BA', '#FFDFBA', '#FFFFBA', '#BAFFC9', '#BAE1FF', 
-        '#E2B6FF', '#FFC6FF', '#FDFD96', '#FDF2B6', '#C1E1C1', 
-        '#A8E6CF', '#A2C2E6', '#B3CEE5', '#D0A3FF', '#C8B6FF', 
-        '#E7FFAC', '#FFD6A5', '#FDFFB6', '#CAFFBF', '#9BF6FF'
+        '#FFF475', '#F8E3A1', '#FFCC80', '#FFAB91', // 1행 (노랑~주황)
+        '#E6EE9C', '#A5D6A7', '#80CBC4', '#B39DDB', // 2행 (연두~보라)
+        '#90CAF9', '#9FA8DA', '#F48FB1', '#CE93D8', // 3행 (파랑~분홍)
+        '#BCAAA4', '#B0BEC5', '#EEEEEE', '#607D8B'  // 4행 (갈색~회색)
     ];
     
     let currentView = 'month';
@@ -259,10 +261,10 @@
 
     let todos = JSON.parse(localStorage.getItem('myPremiumTodos')) || [];
     let categories = JSON.parse(localStorage.getItem('myPremiumCategories')) || [
-        { id: 'cat_sda', name: 'SDA', color: '#B3CEE5' },
-        { id: 'cat_ale', name: '에일', color: '#FFB3BA' },
-        { id: 'cat_nike', name: '니케', color: '#BAFFC9' },
-        { id: 'cat_btw', name: 'BTW', color: '#FFDFBA' }
+        { id: 'cat_sda', name: 'SDA', color: PASTEL_COLORS[8] }, // 기본 색상도 새 팔레트에서 선택
+        { id: 'cat_ale', name: '에일', color: PASTEL_COLORS[2] },
+        { id: 'cat_nike', name: '니케', color: PASTEL_COLORS[5] },
+        { id: 'cat_btw', name: 'BTW', color: PASTEL_COLORS[1] }
     ];
 
     todos.forEach(t => { if(t.archived === undefined) t.archived = false; });
@@ -372,7 +374,6 @@
             const catColor = getCategoryColor(todo.categoryId);
             item.style.borderLeftColor = catColor;
             
-            // 핵심 수정: 시간이 없으면 배경을 가득 채움
             if (!todo.time) {
                 item.style.backgroundColor = catColor;
             }
