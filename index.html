@@ -64,13 +64,20 @@
         .day-view-container { background: white; border: 1px solid var(--border-color); border-radius: 8px; padding: 20px; min-height: 400px; position: relative;}
         .empty-placeholder { color: #aaa; text-align: center; padding: 40px; font-size: 14px; }
 
+        /* 드래그 및 텍스트 선택 방지 강화 */
+        .todo-item, .board-card, .board-column {
+            user-select: none;
+            -webkit-user-select: none;
+            -moz-user-select: none;
+        }
+        
         .todo-item {
             font-size: 12px; padding: 4px 8px; border-radius: 4px; display: flex; align-items: center; gap: 6px;
             color: #333; background: rgba(0,0,0,0.05); border-left: 4px solid var(--gray-default);
             cursor: grab; box-shadow: 0 1px 3px rgba(0,0,0,0.1); overflow: hidden;
-            user-select: none;
         }
         .todo-item:active { cursor: grabbing; }
+        .todo-item.dragging, .board-card.dragging, .board-column.dragging { opacity: 0.5; } /* 드래그 상태 클래스 */
         .todo-item.completed span.todo-title-text { text-decoration: line-through; opacity: 0.5; }
         .todo-item input[type="checkbox"] { margin: 0; cursor: pointer; accent-color: var(--primary); flex-shrink: 0; }
         .todo-title-text { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex-grow: 1; min-width: 0; cursor: pointer; }
@@ -82,7 +89,7 @@
         .board-view { display: flex; gap: 20px; overflow-x: auto; padding-bottom: 20px; align-items: flex-start; }
         .board-column { 
             background: #f9f9fa; border-radius: 12px; width: 300px; min-width: 300px; padding: 15px; 
-            display: flex; flex-direction: column; gap: 10px; border: 2px solid var(--border-color); transition: 0.2s;
+            display: flex; flex-direction: column; gap: 10px; border: 2px solid var(--border-color); transition: border 0.2s;
         }
         .board-column.drag-over { background: var(--highlight-color); border-color: var(--primary); border-style: dashed; }
         .board-column.drag-over-cat { border-left: 8px solid var(--primary); transform: scale(0.98); }
@@ -98,8 +105,9 @@
         
         .board-card {
             background: white; padding: 12px; border-radius: 8px; box-shadow: 0 1px 4px rgba(0,0,0,0.05);
-            border: 1px solid var(--border-color); cursor: grab; display: flex; align-items: flex-start; gap: 10px; user-select: none;
+            border: 1px solid var(--border-color); cursor: grab; display: flex; align-items: flex-start; gap: 10px;
         }
+        .board-card:active { cursor: grabbing; }
         .board-card.completed .card-title { text-decoration: line-through; color: var(--text-muted); }
         .board-card input[type="checkbox"] { margin-top: 3px; width: 16px; height: 16px; cursor: pointer; accent-color: var(--primary); flex-shrink: 0;}
         .card-content { flex-grow: 1; display: flex; flex-direction: column; gap: 6px; min-width: 0; cursor: pointer; }
@@ -378,6 +386,7 @@
         }
     }
 
+    // --- 달력 뷰 (월간, 주간, 일간) 렌더링 ---
     function createCalendarCell(dateStr, label) {
         const cell = document.createElement('div');
         cell.className = 'day-cell';
@@ -418,32 +427,40 @@
                 <span class="star-btn" style="color: ${starColor};" onclick="toggleStar('${todo.id}', event)">${starIcon}</span>
             `;
 
-            // === [핵심 드래그 앤 드롭 수정 부분] ===
+            // === [핵심 버그 수정 부분] ===
+            item.setAttribute('draggable', 'true');
             item.addEventListener('dragstart', (e) => {
                 e.stopPropagation(); 
                 draggedType = 'todo'; 
                 draggedId = todo.id; 
-                item.style.opacity = '0.5';
-                // HTML5 Drag and Drop 필수 설정! (이게 없으면 크롬/엣지에서 중간에 드래그 취소됨)
+                // 크롬 등 브라우저 보안 이슈 해결 (필수)
                 e.dataTransfer.effectAllowed = 'move';
                 e.dataTransfer.setData('text/plain', todo.id); 
+                // 시각적 반투명 처리를 즉시 하지 않고 0.01초 늦게 실행하여 드래그 끊김 방지
+                setTimeout(() => item.classList.add('dragging'), 0); 
             });
             item.addEventListener('dragend', () => {
-                draggedType = null; draggedId = null; item.style.opacity = '1';
+                draggedType = null; draggedId = null; 
+                item.classList.remove('dragging');
                 document.querySelectorAll('.day-cell').forEach(c => c.classList.remove('drag-over'));
             });
 
             cell.appendChild(item);
         });
 
-        cell.addEventListener('dragover', e => { e.preventDefault(); cell.classList.add('drag-over'); });
+        cell.addEventListener('dragover', e => { 
+            e.preventDefault(); 
+            if (draggedType === 'todo') cell.classList.add('drag-over');
+        });
         cell.addEventListener('dragleave', () => cell.classList.remove('drag-over'));
         cell.addEventListener('drop', e => {
-            e.preventDefault(); cell.classList.remove('drag-over');
+            e.preventDefault(); 
+            cell.classList.remove('drag-over');
             if (draggedType === 'todo' && draggedId) updateTodoProp(draggedId, 'date', dateStr);
         });
         
         cell.addEventListener('click', e => {
+            // 체크박스나 별표 등을 클릭한 게 아니고, 배경을 클릭했을 때만 모달 열기
             if(e.target === cell || e.target.closest('.day-number') || e.target.classList.contains('empty-placeholder')) {
                 openTodoModal(dateStr); 
             }
@@ -494,7 +511,6 @@
     function createBoardCard(todo) {
         const card = document.createElement('div');
         card.className = `board-card ${todo.completed ? 'completed' : ''}`;
-        card.draggable = true;
         
         let dateTag = '날짜 없음';
         if(todo.date) {
@@ -517,14 +533,16 @@
             <span class="star-btn" style="color: ${starColor}; margin-top: -3px;" onclick="toggleStar('${todo.id}', event)">${starIcon}</span>
         `;
 
-        // === [핵심 드래그 앤 드롭 수정 부분] ===
+        card.setAttribute('draggable', 'true');
         card.addEventListener('dragstart', (e) => { 
-            e.stopPropagation(); draggedType = 'todo'; draggedId = todo.id; card.style.opacity = '0.5'; 
+            e.stopPropagation(); draggedType = 'todo'; draggedId = todo.id; 
             e.dataTransfer.effectAllowed = 'move';
             e.dataTransfer.setData('text/plain', todo.id); 
+            setTimeout(() => card.classList.add('dragging'), 0);
         });
         card.addEventListener('dragend', () => { 
-            draggedType = null; draggedId = null; card.style.opacity = '1'; 
+            draggedType = null; draggedId = null; 
+            card.classList.remove('dragging');
             document.querySelectorAll('.board-column').forEach(c => c.classList.remove('drag-over', 'drag-over-cat')); 
         });
         return card;
@@ -542,18 +560,19 @@
             col.dataset.categoryId = cat.id || '';
             
             if(cat.id !== '') {
-                col.draggable = true;
+                col.setAttribute('draggable', 'true');
                 col.classList.add('draggable-col');
                 
-                // === [핵심 드래그 앤 드롭 수정 부분] ===
                 col.addEventListener('dragstart', (e) => {
                     if(e.target.closest('.board-card') || e.target.closest('.completed-toggle-btn')) return;
-                    draggedType = 'category'; draggedId = cat.id; col.style.opacity = '0.5';
+                    draggedType = 'category'; draggedId = cat.id; 
                     e.dataTransfer.effectAllowed = 'move';
                     e.dataTransfer.setData('text/plain', cat.id); 
+                    setTimeout(() => col.classList.add('dragging'), 0);
                 });
                 col.addEventListener('dragend', () => {
-                    draggedType = null; draggedId = null; col.style.opacity = '1';
+                    draggedType = null; draggedId = null; 
+                    col.classList.remove('dragging');
                     document.querySelectorAll('.board-column').forEach(c => c.classList.remove('drag-over-cat', 'drag-over'));
                 });
             }
