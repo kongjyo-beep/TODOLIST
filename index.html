@@ -4,6 +4,10 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>프로젝트 캘린더 & 보드</title>
+    
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+
     <style>
         :root {
             --bg-color: #f5f5f7;
@@ -29,14 +33,15 @@
             padding: 20px; display: flex; flex-direction: column; min-height: 80vh;
         }
 
-        .top-nav { display: flex; gap: 10px; margin-bottom: 20px; border-bottom: 1px solid var(--border-color); padding-bottom: 15px; }
+        .top-nav { display: flex; gap: 10px; margin-bottom: 20px; border-bottom: 1px solid var(--border-color); padding-bottom: 15px; flex-wrap: wrap;}
         .nav-btn { padding: 8px 20px; border: none; background: none; font-size: 16px; font-weight: bold; color: var(--text-muted); cursor: pointer; border-radius: 20px; transition: 0.2s; }
         .nav-btn:hover { background: #f0f0f0; }
         .nav-btn.active { background: var(--primary); color: white; }
 
         .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
         .header h1 { margin: 0; font-size: 24px; }
-        .header button { padding: 8px 16px; cursor: pointer; border: 1px solid var(--border-color); background: white; border-radius: 6px; }
+        .header-controls { display: flex; gap: 8px; }
+        .header button { padding: 8px 16px; cursor: pointer; border: 1px solid var(--border-color); background: white; border-radius: 6px; font-weight: bold;}
         .header button:hover { background: #f0f0f0; }
         
         .view-area { display: none; flex-grow: 1; }
@@ -64,20 +69,18 @@
         .day-view-container { background: white; border: 1px solid var(--border-color); border-radius: 8px; padding: 20px; min-height: 400px; position: relative;}
         .empty-placeholder { color: #aaa; text-align: center; padding: 40px; font-size: 14px; }
 
-        /* 드래그 및 텍스트 선택 방지 강화 */
-        .todo-item, .board-card, .board-column {
-            user-select: none;
-            -webkit-user-select: none;
-            -moz-user-select: none;
-        }
+        .todo-item, .board-card, .board-column { user-select: none; -webkit-user-select: none; -moz-user-select: none; }
         
         .todo-item {
-            font-size: 12px; padding: 4px 8px; border-radius: 4px; display: flex; align-items: center; gap: 6px;
+            font-size: 12px; padding: 6px 8px; border-radius: 4px; display: flex; flex-direction: column; gap: 4px;
             color: #333; background: rgba(0,0,0,0.05); border-left: 4px solid var(--gray-default);
             cursor: grab; box-shadow: 0 1px 3px rgba(0,0,0,0.1); overflow: hidden;
         }
+        .todo-item-top { display: flex; align-items: center; gap: 6px; width: 100%; }
+        .todo-memo-text { font-size: 11px; color: #666; padding-left: 22px; white-space: pre-wrap; word-break: break-all; }
+        
         .todo-item:active { cursor: grabbing; }
-        .todo-item.dragging, .board-card.dragging, .board-column.dragging { opacity: 0.5; } /* 드래그 상태 클래스 */
+        .todo-item.dragging, .board-card.dragging, .board-column.dragging { opacity: 0.5; } 
         .todo-item.completed span.todo-title-text { text-decoration: line-through; opacity: 0.5; }
         .todo-item input[type="checkbox"] { margin: 0; cursor: pointer; accent-color: var(--primary); flex-shrink: 0; }
         .todo-title-text { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex-grow: 1; min-width: 0; cursor: pointer; }
@@ -89,7 +92,7 @@
         .board-view { display: flex; gap: 20px; overflow-x: auto; padding-bottom: 20px; align-items: flex-start; }
         .board-column { 
             background: #f9f9fa; border-radius: 12px; width: 300px; min-width: 300px; padding: 15px; 
-            display: flex; flex-direction: column; gap: 10px; border: 2px solid var(--border-color); transition: border 0.2s;
+            display: flex; flex-direction: column; gap: 10px; border: 2px solid var(--border-color); transition: 0.2s;
         }
         .board-column.drag-over { background: var(--highlight-color); border-color: var(--primary); border-style: dashed; }
         .board-column.drag-over-cat { border-left: 8px solid var(--primary); transform: scale(0.98); }
@@ -107,7 +110,6 @@
             background: white; padding: 12px; border-radius: 8px; box-shadow: 0 1px 4px rgba(0,0,0,0.05);
             border: 1px solid var(--border-color); cursor: grab; display: flex; align-items: flex-start; gap: 10px;
         }
-        .board-card:active { cursor: grabbing; }
         .board-card.completed .card-title { text-decoration: line-through; color: var(--text-muted); }
         .board-card input[type="checkbox"] { margin-top: 3px; width: 16px; height: 16px; cursor: pointer; accent-color: var(--primary); flex-shrink: 0;}
         .card-content { flex-grow: 1; display: flex; flex-direction: column; gap: 6px; min-width: 0; cursor: pointer; }
@@ -151,6 +153,10 @@
         .category-select-always { padding: 10px; border: 1px solid var(--border-color); border-radius: 8px; width: 100%; font-size: 14px; background-color: #f9f9fa; cursor: pointer; margin-bottom: 5px; outline: none; }
         .category-select-always:focus { border-color: var(--primary); background: white;}
         .title-input { width: 100%; border: none; border-bottom: 2px solid var(--primary); font-size: 18px; padding: 8px 0; outline: none; background: transparent; }
+        
+        .memo-input { width: 100%; padding: 10px; border: 1px solid var(--border-color); border-radius: 8px; font-size: 13px; font-family: inherit; resize: vertical; min-height: 70px; background-color: #f9f9fa; outline: none;}
+        .memo-input:focus { border-color: var(--primary); background: white;}
+
         .form-toggles { display: flex; gap: 10px; }
         .toggle-btn { background: #f0f0f0; border: none; padding: 6px 12px; border-radius: 20px; font-size: 13px; cursor: pointer; display: flex; align-items: center; gap: 6px; }
         .toggle-btn:hover { background: #e0e0e0; }
@@ -174,10 +180,10 @@
         
         .fab {
             position: fixed; bottom: 30px; right: 30px; width: 56px; height: 56px; border-radius: 50%;
-            background: var(--primary); color: white; border: none; font-size: 30px; display: flex;
-            justify-content: center; align-items: center; cursor: pointer; box-shadow: 0 4px 12px rgba(66, 133, 244, 0.4); transition: 0.2s;
+            background: white; color: var(--text-main); border: 1px solid var(--border-color); font-size: 24px; font-weight: bold; display: flex;
+            justify-content: center; align-items: center; cursor: pointer; box-shadow: 0 4px 12px rgba(0,0,0,0.1); transition: 0.2s; z-index: 50;
         }
-        .fab:hover { transform: scale(1.05); }
+        .fab:hover { transform: scale(1.05); background: #f0f0f0;}
     </style>
 </head>
 <body>
@@ -194,7 +200,10 @@
     <div class="header">
         <button id="prevBtn">&lt; 이전</button>
         <h1 id="dateTitle">2026년 3월</h1>
-        <button id="nextBtn">다음 &gt;</button>
+        <div class="header-controls">
+            <button onclick="openTodoModal()" style="background: var(--primary); color: white; border: none;">+ 할 일 추가</button>
+            <button id="nextBtn">다음 &gt;</button>
+        </div>
     </div>
     
     <div id="monthView" class="view-area active"><div class="calendar-grid" id="monthGrid"></div></div>
@@ -204,7 +213,7 @@
     <div id="archiveView" class="view-area"><div class="day-view-container" id="archiveContainer"></div></div>
 </div>
 
-<button class="fab" onclick="openTodoModal()">+</button>
+<button class="fab" onclick="window.scrollTo({top: 0, behavior: 'smooth'})">↑</button>
 
 <div class="modal-overlay" id="todoModal">
     <div class="modal-content">
@@ -219,7 +228,8 @@
             </div>
             
             <input type="text" id="todoTitle" class="title-input" placeholder="할 일 내용 입력 후 Enter" autofocus onkeydown="if(event.key === 'Enter') saveTodo()">
-            
+            <textarea id="todoMemo" class="memo-input" placeholder="상세 메모나 링크를 적어주세요 (선택사항)"></textarea>
+
             <div class="form-toggles">
                 <button class="toggle-btn" onclick="toggleInput('timeSection')">⏰ 시간</button>
                 <button class="toggle-btn" onclick="toggleInput('dateSection')">📅 날짜 변경</button>
@@ -254,6 +264,24 @@
 </div>
 
 <script>
+    // 1. 질문자님의 파이어베이스 설정 정보 입력 완료
+    const firebaseConfig = {
+        apiKey: "AIzaSyBpUKxiGDzeourbHXghi9n3qghp7F3NHwM",
+        authDomain: "todolist-a4ed6.firebaseapp.com",
+        databaseURL: "https://todolist-a4ed6-default-rtdb.firebaseio.com", 
+        projectId: "todolist-a4ed6",
+        storageBucket: "todolist-a4ed6.firebasestorage.app",
+        messagingSenderId: "990223395483",
+        appId: "1:990223395483:web:bd5e35512a649aa78e343e",
+        measurementId: "G-795C9LJS36"
+    };
+
+    // 파이어베이스 실행 및 데이터베이스 연결
+    firebase.initializeApp(firebaseConfig);
+    const database = firebase.database();
+
+    // ----------------------------------------------------
+
     const PASTEL_COLORS = [
         '#FCE2E3', '#FCE4CF', '#FBC9C9', '#FFCABB',
         '#F8FAD4', '#FFEB94', '#F9DCCA', '#FFC499',
@@ -273,22 +301,36 @@
     let editingCategoryId = null;
     let editingTodoId = null;
 
-    let todos = JSON.parse(localStorage.getItem('myPremiumTodos')) || [];
-    let categories = JSON.parse(localStorage.getItem('myPremiumCategories')) || [
+    let todos = [];
+    let categories = [
         { id: 'cat_sda', name: 'SDA', color: PASTEL_COLORS[0] }, 
         { id: 'cat_ale', name: '에일', color: PASTEL_COLORS[1] },
         { id: 'cat_nike', name: '니케', color: PASTEL_COLORS[2] },
         { id: 'cat_btw', name: 'BTW', color: PASTEL_COLORS[3] }
     ];
 
-    todos.forEach(t => { 
-        if(t.archived === undefined) t.archived = false; 
-        if(t.isImportant === undefined) t.isImportant = false;
+    // 2. 파이어베이스에서 실시간 데이터 불러오기
+    database.ref('premiumApp').on('value', (snapshot) => {
+        const data = snapshot.val();
+        if (data) {
+            todos = data.todos || [];
+            categories = data.categories || categories;
+            
+            todos.forEach(t => { 
+                if(t.archived === undefined) t.archived = false; 
+                if(t.isImportant === undefined) t.isImportant = false;
+                if(t.memo === undefined) t.memo = '';
+            });
+        }
+        renderView();
     });
 
+    // 3. 파이어베이스에 데이터 저장
     function saveData() {
-        localStorage.setItem('myPremiumTodos', JSON.stringify(todos));
-        localStorage.setItem('myPremiumCategories', JSON.stringify(categories));
+        database.ref('premiumApp').set({
+            todos: todos,
+            categories: categories
+        });
     }
 
     function getCategoryColor(catId) {
@@ -339,11 +381,9 @@
             document.getElementById(`${currentView}View`).classList.add('active');
             
             if(currentView === 'archive') {
-                document.querySelector('.header').style.display = 'none';
-                document.querySelector('.fab').style.display = 'none';
+                document.querySelector('.header-controls').style.display = 'none';
             } else {
-                document.querySelector('.header').style.display = 'flex';
-                document.querySelector('.fab').style.display = 'flex';
+                document.querySelector('.header-controls').style.display = 'flex';
             }
             renderView();
         });
@@ -386,7 +426,6 @@
         }
     }
 
-    // --- 달력 뷰 (월간, 주간, 일간) 렌더링 ---
     function createCalendarCell(dateStr, label) {
         const cell = document.createElement('div');
         cell.className = 'day-cell';
@@ -409,7 +448,6 @@
             
             const catColor = getCategoryColor(todo.categoryId);
             item.style.borderLeftColor = catColor;
-            
             if (!todo.time) item.style.backgroundColor = catColor;
             
             let catLabel = '';
@@ -421,46 +459,43 @@
             const starColor = todo.isImportant ? 'var(--warning)' : '#cccccc';
             const starIcon = todo.isImportant ? '★' : '☆';
 
+            let memoHtml = '';
+            if (currentView === 'day' && todo.memo) {
+                memoHtml = `<div class="todo-memo-text">📝 ${todo.memo}</div>`;
+            }
+
             item.innerHTML = `
-                <input type="checkbox" ${todo.completed ? 'checked' : ''} onchange="toggleComplete('${todo.id}', event)">
-                <span class="todo-title-text" onclick="editTodo('${todo.id}', event)">${catLabel}${todo.time ? `[${todo.time}] ` : ''}${todo.title}</span>
-                <span class="star-btn" style="color: ${starColor};" onclick="toggleStar('${todo.id}', event)">${starIcon}</span>
+                <div class="todo-item-top">
+                    <input type="checkbox" ${todo.completed ? 'checked' : ''} onchange="toggleComplete('${todo.id}', event)">
+                    <span class="todo-title-text" onclick="editTodo('${todo.id}', event)">${catLabel}${todo.time ? `[${todo.time}] ` : ''}${todo.title}</span>
+                    <span class="star-btn" style="color: ${starColor};" onclick="toggleStar('${todo.id}', event)">${starIcon}</span>
+                </div>
+                ${memoHtml}
             `;
 
-            // === [핵심 버그 수정 부분] ===
             item.setAttribute('draggable', 'true');
             item.addEventListener('dragstart', (e) => {
-                e.stopPropagation(); 
-                draggedType = 'todo'; 
-                draggedId = todo.id; 
-                // 크롬 등 브라우저 보안 이슈 해결 (필수)
+                e.stopPropagation(); draggedType = 'todo'; draggedId = todo.id; 
                 e.dataTransfer.effectAllowed = 'move';
                 e.dataTransfer.setData('text/plain', todo.id); 
-                // 시각적 반투명 처리를 즉시 하지 않고 0.01초 늦게 실행하여 드래그 끊김 방지
                 setTimeout(() => item.classList.add('dragging'), 0); 
             });
             item.addEventListener('dragend', () => {
-                draggedType = null; draggedId = null; 
-                item.classList.remove('dragging');
+                draggedType = null; draggedId = null; item.classList.remove('dragging');
                 document.querySelectorAll('.day-cell').forEach(c => c.classList.remove('drag-over'));
             });
 
             cell.appendChild(item);
         });
 
-        cell.addEventListener('dragover', e => { 
-            e.preventDefault(); 
-            if (draggedType === 'todo') cell.classList.add('drag-over');
-        });
+        cell.addEventListener('dragover', e => { e.preventDefault(); cell.classList.add('drag-over'); });
         cell.addEventListener('dragleave', () => cell.classList.remove('drag-over'));
         cell.addEventListener('drop', e => {
-            e.preventDefault(); 
-            cell.classList.remove('drag-over');
+            e.preventDefault(); cell.classList.remove('drag-over');
             if (draggedType === 'todo' && draggedId) updateTodoProp(draggedId, 'date', dateStr);
         });
         
         cell.addEventListener('click', e => {
-            // 체크박스나 별표 등을 클릭한 게 아니고, 배경을 클릭했을 때만 모달 열기
             if(e.target === cell || e.target.closest('.day-number') || e.target.classList.contains('empty-placeholder')) {
                 openTodoModal(dateStr); 
             }
@@ -501,10 +536,10 @@
         if(todos.filter(t => t.date === dateStr && !t.archived).length === 0) {
             const placeholder = document.createElement('div');
             placeholder.className = 'empty-placeholder';
-            placeholder.textContent = '이곳을 클릭하거나 우측 하단 + 버튼을 눌러 추가하세요.';
+            placeholder.textContent = '이곳을 클릭하거나 상단 + 버튼을 눌러 추가하세요.';
             cell.appendChild(placeholder);
         }
-        cell.style.minHeight = '300px'; cell.style.border = 'none';
+        cell.style.minHeight = '400px'; cell.style.border = 'none';
         container.appendChild(cell);
     }
 
@@ -536,13 +571,11 @@
         card.setAttribute('draggable', 'true');
         card.addEventListener('dragstart', (e) => { 
             e.stopPropagation(); draggedType = 'todo'; draggedId = todo.id; 
-            e.dataTransfer.effectAllowed = 'move';
-            e.dataTransfer.setData('text/plain', todo.id); 
+            e.dataTransfer.effectAllowed = 'move'; e.dataTransfer.setData('text/plain', todo.id); 
             setTimeout(() => card.classList.add('dragging'), 0);
         });
         card.addEventListener('dragend', () => { 
-            draggedType = null; draggedId = null; 
-            card.classList.remove('dragging');
+            draggedType = null; draggedId = null; card.classList.remove('dragging');
             document.querySelectorAll('.board-column').forEach(c => c.classList.remove('drag-over', 'drag-over-cat')); 
         });
         return card;
@@ -562,17 +595,14 @@
             if(cat.id !== '') {
                 col.setAttribute('draggable', 'true');
                 col.classList.add('draggable-col');
-                
                 col.addEventListener('dragstart', (e) => {
                     if(e.target.closest('.board-card') || e.target.closest('.completed-toggle-btn')) return;
                     draggedType = 'category'; draggedId = cat.id; 
-                    e.dataTransfer.effectAllowed = 'move';
-                    e.dataTransfer.setData('text/plain', cat.id); 
+                    e.dataTransfer.effectAllowed = 'move'; e.dataTransfer.setData('text/plain', cat.id); 
                     setTimeout(() => col.classList.add('dragging'), 0);
                 });
                 col.addEventListener('dragend', () => {
-                    draggedType = null; draggedId = null; 
-                    col.classList.remove('dragging');
+                    draggedType = null; draggedId = null; col.classList.remove('dragging');
                     document.querySelectorAll('.board-column').forEach(c => c.classList.remove('drag-over-cat', 'drag-over'));
                 });
             }
@@ -597,9 +627,7 @@
             const activeTodos = catTodos.filter(t => !t.completed);
             const completedTodos = catTodos.filter(t => t.completed);
 
-            activeTodos.forEach(todo => {
-                col.appendChild(createBoardCard(todo));
-            });
+            activeTodos.forEach(todo => { col.appendChild(createBoardCard(todo)); });
 
             if (completedTodos.length > 0) {
                 const toggleBtn = document.createElement('button');
@@ -616,12 +644,8 @@
                     toggleBtn.querySelector('.toggle-icon').textContent = isHidden ? '▲' : '▼';
                 };
 
-                completedTodos.forEach(todo => {
-                    compContainer.appendChild(createBoardCard(todo));
-                });
-
-                col.appendChild(toggleBtn);
-                col.appendChild(compContainer);
+                completedTodos.forEach(todo => { compContainer.appendChild(createBoardCard(todo)); });
+                col.appendChild(toggleBtn); col.appendChild(compContainer);
             }
 
             col.addEventListener('dragover', e => { 
@@ -642,7 +666,7 @@
                     if (draggedIdx > -1) {
                         const [movedCat] = categories.splice(draggedIdx, 1);
                         categories.splice(targetIdx, 0, movedCat);
-                        saveData(); renderView();
+                        saveData();
                     }
                 }
             });
@@ -699,39 +723,19 @@
         container.appendChild(list);
     }
 
-    function restoreTodo(id) {
-        const todo = todos.find(t => t.id === id);
-        if (todo) { todo.archived = false; saveData(); renderView(); }
-    }
+    function restoreTodo(id) { const todo = todos.find(t => t.id === id); if (todo) { todo.archived = false; saveData(); } }
+    function permanentDeleteTodo(id) { if(confirm('영구 삭제하시겠습니까?')) { todos = todos.filter(t => t.id !== id); saveData(); } }
 
-    function permanentDeleteTodo(id) {
-        if(confirm('이 할 일을 영구적으로 삭제하시겠습니까?\n이 작업은 되돌릴 수 없습니다.')) {
-            todos = todos.filter(t => t.id !== id);
-            saveData(); renderView();
-        }
-    }
+    function toggleComplete(id, event) { if(event) event.stopPropagation(); const todo = todos.find(t => t.id === id); if (todo) { todo.completed = !todo.completed; saveData(); } }
+    function toggleStar(id, event) { if(event) event.stopPropagation(); const todo = todos.find(t => t.id === id); if (todo) { todo.isImportant = !todo.isImportant; saveData(); } }
+    function updateTodoProp(todoId, prop, value) { const todo = todos.find(t => t.id === todoId); if (todo && todo[prop] !== value) { todo[prop] = value; saveData(); } }
 
-    function toggleComplete(id, event) {
-        if(event) event.stopPropagation();
-        const todo = todos.find(t => t.id === id);
-        if (todo) { todo.completed = !todo.completed; saveData(); renderView(); }
-    }
-    
-    function toggleStar(id, event) {
-        if(event) event.stopPropagation();
-        const todo = todos.find(t => t.id === id);
-        if (todo) { 
-            todo.isImportant = !todo.isImportant; 
-            saveData(); renderView(); 
+    // --- 여백 클릭 시 창 닫기 ---
+    window.addEventListener('click', (e) => {
+        if (e.target.classList.contains('modal-overlay')) {
+            closeModal(e.target.id);
         }
-    }
-
-    function updateTodoProp(todoId, prop, value) {
-        const todo = todos.find(t => t.id === todoId);
-        if (todo && todo[prop] !== value) {
-            todo[prop] = value; saveData(); renderView();
-        }
-    }
+    });
 
     function openTodoModal(dateStr = '', catId = null) {
         editingTodoId = null; 
@@ -741,7 +745,9 @@
         document.getElementById('archiveTodoBtn').style.display = 'none'; 
 
         const titleInput = document.getElementById('todoTitle');
-        titleInput.value = ''; document.getElementById('todoTime').value = '';
+        titleInput.value = ''; 
+        document.getElementById('todoMemo').value = ''; 
+        document.getElementById('todoTime').value = '';
         document.getElementById('todoDate').value = dateStr || todayStr;
         
         const select = document.getElementById('todoCategorySelect');
@@ -766,6 +772,7 @@
         document.getElementById('archiveTodoBtn').style.display = 'block'; 
 
         document.getElementById('todoTitle').value = todo.title;
+        document.getElementById('todoMemo').value = todo.memo || ''; 
         document.getElementById('todoDate').value = todo.date || todayStr;
         document.getElementById('todoTime').value = todo.time || '';
         
@@ -791,22 +798,27 @@
             const todo = todos.find(t => t.id === editingTodoId);
             if (todo) {
                 todo.title = title;
+                todo.memo = document.getElementById('todoMemo').value.trim();
                 todo.date = document.getElementById('todoDate').value || todayStr;
                 todo.time = document.getElementById('todoTime').value || null;
                 todo.categoryId = document.getElementById('todoCategorySelect').value || null;
             }
-            saveData(); renderView(); closeModal('todoModal'); 
+            saveData(); closeModal('todoModal'); 
         } else {
             const newTodo = {
-                id: 't_' + Date.now(), title: title,
+                id: 't_' + Date.now(), 
+                title: title,
+                memo: document.getElementById('todoMemo').value.trim(),
                 date: document.getElementById('todoDate').value || todayStr,
                 time: document.getElementById('todoTime').value || null,
                 categoryId: document.getElementById('todoCategorySelect').value || null,
                 completed: false, archived: false, isImportant: false 
             };
             todos.push(newTodo);
-            saveData(); renderView();
-            titleInput.value = ''; titleInput.focus();
+            saveData(); 
+            titleInput.value = ''; 
+            document.getElementById('todoMemo').value = '';
+            titleInput.focus();
         }
     }
 
@@ -814,7 +826,7 @@
         if (!editingTodoId) return;
         if(confirm('이 할 일을 삭제하시겠습니까?')) {
             todos = todos.filter(t => t.id !== editingTodoId);
-            saveData(); renderView(); closeModal('todoModal');
+            saveData(); closeModal('todoModal');
         }
     }
 
@@ -822,14 +834,11 @@
         if (!editingTodoId) return;
         const todo = todos.find(t => t.id === editingTodoId);
         if (todo) {
-            todo.archived = true;
-            saveData(); renderView(); closeModal('todoModal');
-            alert('아카이브로 이동되었습니다.');
+            todo.archived = true; saveData(); closeModal('todoModal'); alert('아카이브로 이동되었습니다.');
         }
     }
 
     let selectedColor = '';
-    
     function openCategoryModal(catId) {
         editingCategoryId = catId;
         const titleEl = document.getElementById('categoryModalTitle');
@@ -872,22 +881,21 @@
             const cat = categories.find(c => c.id === editingCategoryId);
             if (cat) { cat.name = name; cat.color = selectedColor; }
         }
-        saveData(); closeModal('categoryModal'); renderView(); 
+        saveData(); closeModal('categoryModal'); 
     }
 
     function deleteCategory() {
         if (editingCategoryId === 'new') return;
-        if(confirm('이 프로젝트(카테고리)를 삭제하시겠습니까?\n내부에 있던 할 일들은 "미지정"으로 이동됩니다.')) {
+        if(confirm('프로젝트를 삭제하시겠습니까?\n내부의 할 일들은 "미지정"으로 이동됩니다.')) {
             categories = categories.filter(c => c.id !== editingCategoryId);
             todos.forEach(t => { if (t.categoryId === editingCategoryId) t.categoryId = null; });
-            saveData(); closeModal('categoryModal'); renderView();
+            saveData(); closeModal('categoryModal'); 
         }
     }
 
     function toggleInput(sectionId) { document.getElementById(sectionId).classList.toggle('active'); }
     function closeModal(modalId) { document.getElementById(modalId).classList.remove('active'); }
 
-    renderView();
 </script>
 </body>
 </html>
