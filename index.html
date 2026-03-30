@@ -2,7 +2,7 @@
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>프로젝트 캘린더 & 보드</title>
     
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
@@ -33,16 +33,20 @@
             padding: 20px; display: flex; flex-direction: column; min-height: 80vh;
         }
 
-        .top-nav { display: flex; gap: 10px; margin-bottom: 20px; border-bottom: 1px solid var(--border-color); padding-bottom: 15px; flex-wrap: wrap;}
-        .nav-btn { padding: 8px 20px; border: none; background: none; font-size: 16px; font-weight: bold; color: var(--text-muted); cursor: pointer; border-radius: 20px; transition: 0.2s; }
+        /* 네비게이션 가로 스크롤 가능하게 수정 */
+        .top-nav { display: flex; gap: 10px; margin-bottom: 15px; border-bottom: 1px solid var(--border-color); padding-bottom: 15px; overflow-x: auto; white-space: nowrap; -webkit-overflow-scrolling: touch;}
+        .top-nav::-webkit-scrollbar { display: none; }
+        .nav-btn { flex-shrink: 0; padding: 8px 20px; border: none; background: none; font-size: 16px; font-weight: bold; color: var(--text-muted); cursor: pointer; border-radius: 20px; transition: 0.2s; }
         .nav-btn:hover { background: #f0f0f0; }
         .nav-btn.active { background: var(--primary); color: white; }
 
-        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
-        .header h1 { margin: 0; font-size: 24px; }
-        .header-controls { display: flex; gap: 8px; }
-        .header button { padding: 8px 16px; cursor: pointer; border: 1px solid var(--border-color); background: white; border-radius: 6px; font-weight: bold;}
-        .header button:hover { background: #f0f0f0; }
+        /* 헤더 구조 깔끔하게 변경 */
+        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; flex-wrap: wrap; gap: 10px;}
+        .month-control { display: flex; align-items: center; gap: 10px; }
+        .month-control h1 { margin: 0; font-size: 22px; white-space: nowrap; text-align: center; }
+        .month-control button { padding: 6px 12px; cursor: pointer; border: 1px solid var(--border-color); background: white; border-radius: 6px; font-weight: bold; font-size: 16px;}
+        .month-control button:hover { background: #f0f0f0; }
+        .add-btn { background: var(--primary); color: white; border: none; padding: 8px 16px; border-radius: 6px; font-weight: bold; cursor: pointer;}
         
         .view-area { display: none; flex-grow: 1; }
         .view-area.active { display: block; }
@@ -88,6 +92,13 @@
         
         .star-btn { font-size: 16px; cursor: pointer; margin-left: auto; flex-shrink: 0; display: inline-flex; align-items: center; padding-left: 5px;}
         .star-btn:hover { transform: scale(1.2); }
+
+        /* +N개 더보기 버튼 스타일 */
+        .more-todos-btn {
+            font-size: 11px; font-weight: bold; color: var(--text-muted); text-align: center;
+            margin-top: 2px; padding: 3px 0; background: #f5f5f7; border-radius: 4px; cursor: pointer; transition: 0.2s;
+        }
+        .more-todos-btn:hover { background: #e0e0e0; color: var(--text-main); }
 
         .board-view { display: flex; gap: 20px; overflow-x: auto; padding-bottom: 20px; align-items: flex-start; }
         .board-column { 
@@ -144,7 +155,7 @@
             visibility: hidden; opacity: 0; transition: 0.2s; z-index: 100;
         }
         .modal-overlay.active { visibility: visible; opacity: 1; }
-        .modal-content { background: white; width: 400px; border-radius: 12px; padding: 24px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); }
+        .modal-content { background: white; width: 400px; max-width: 90%; border-radius: 12px; padding: 24px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); max-height: 90vh; overflow-y: auto;}
         .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
         .modal-header h2 { margin: 0; font-size: 18px; }
         .close-btn { background: none; border: none; font-size: 24px; cursor: pointer; color: var(--text-muted); }
@@ -157,14 +168,14 @@
         .memo-input { width: 100%; padding: 10px; border: 1px solid var(--border-color); border-radius: 8px; font-size: 13px; font-family: inherit; resize: vertical; min-height: 70px; background-color: #f9f9fa; outline: none;}
         .memo-input:focus { border-color: var(--primary); background: white;}
 
-        .form-toggles { display: flex; gap: 10px; }
+        .form-toggles { display: flex; gap: 10px; flex-wrap: wrap;}
         .toggle-btn { background: #f0f0f0; border: none; padding: 6px 12px; border-radius: 20px; font-size: 13px; cursor: pointer; display: flex; align-items: center; gap: 6px; }
         .toggle-btn:hover { background: #e0e0e0; }
         .hidden-input { display: none; margin-top: 10px; }
         .hidden-input.active { display: flex; flex-direction: column; gap: 5px; }
         .hidden-input input { padding: 8px; border: 1px solid var(--border-color); border-radius: 6px; width: 100%; }
         
-        .modal-action-btns { display: flex; gap: 8px; margin-top: 10px; }
+        .modal-action-btns { display: flex; gap: 8px; margin-top: 10px; flex-wrap: wrap;}
         .submit-btn { background: var(--primary); color: white; border: none; padding: 12px; border-radius: 8px; font-weight: bold; cursor: pointer; font-size: 14px; flex-grow: 1; }
         .submit-btn:hover { background: #3367d6; }
         .delete-btn { background: var(--danger); color: white; border: none; padding: 12px 16px; border-radius: 8px; font-weight: bold; cursor: pointer; font-size: 14px; display: none; }
@@ -184,6 +195,30 @@
             justify-content: center; align-items: center; cursor: pointer; box-shadow: 0 4px 12px rgba(0,0,0,0.1); transition: 0.2s; z-index: 50;
         }
         .fab:hover { transform: scale(1.05); background: #f0f0f0;}
+
+        /* ====== 스마트폰 화면 대응 (미디어 쿼리) ====== */
+        @media (max-width: 768px) {
+            body { padding: 10px; }
+            .container { padding: 10px; min-height: 90vh;}
+            .month-control h1 { font-size: 18px; }
+            .header { justify-content: center; }
+            
+            /* 모바일 월간 달력 전용 최적화 */
+            .day-cell { min-height: 90px; padding: 3px; gap: 2px; }
+            .day-number { font-size: 12px; margin-bottom: 2px; justify-content: center;}
+            .day-number.today::before { display: none; } /* 공간 절약을 위해 파란 막대 숨김 */
+            .day-number.today { background: var(--primary); color: white; border-radius: 50%; width: 20px; height: 20px;}
+            
+            /* 모바일: 월간 달력에서만 체크박스/별표 숨기고 글씨 꽉 차게 변경 */
+            #monthGrid .todo-item { padding: 2px 4px; font-size: 10px; gap: 2px; border-radius: 3px;}
+            #monthGrid .todo-item input[type="checkbox"] { display: none; }
+            #monthGrid .todo-item .star-btn { display: none; }
+            #monthGrid .todo-title-text { text-align: center; }
+            #monthGrid .todo-item-top { justify-content: center; }
+            
+            .board-view { flex-direction: column; align-items: center; }
+            .board-column { width: 100%; min-width: auto; }
+        }
     </style>
 </head>
 <body>
@@ -198,11 +233,13 @@
     </div>
 
     <div class="header">
-        <button id="prevBtn">&lt; 이전</button>
-        <h1 id="dateTitle">2026년 3월</h1>
+        <div class="month-control">
+            <button id="prevBtn">&lt;</button>
+            <h1 id="dateTitle">2026년 3월</h1>
+            <button id="nextBtn">&gt;</button>
+        </div>
         <div class="header-controls">
-            <button onclick="openTodoModal()" style="background: var(--primary); color: white; border: none;">+ 할 일 추가</button>
-            <button id="nextBtn">다음 &gt;</button>
+            <button onclick="openTodoModal()" class="add-btn">+ 할 일 추가</button>
         </div>
     </div>
     
@@ -264,7 +301,6 @@
 </div>
 
 <script>
-    // 1. 질문자님의 파이어베이스 설정 정보 입력 완료
     const firebaseConfig = {
         apiKey: "AIzaSyBpUKxiGDzeourbHXghi9n3qghp7F3NHwM",
         authDomain: "todolist-a4ed6.firebaseapp.com",
@@ -276,11 +312,8 @@
         measurementId: "G-795C9LJS36"
     };
 
-    // 파이어베이스 실행 및 데이터베이스 연결
     firebase.initializeApp(firebaseConfig);
     const database = firebase.database();
-
-    // ----------------------------------------------------
 
     const PASTEL_COLORS = [
         '#FCE2E3', '#FCE4CF', '#FBC9C9', '#FFCABB',
@@ -309,7 +342,6 @@
         { id: 'cat_btw', name: 'BTW', color: PASTEL_COLORS[3] }
     ];
 
-    // 2. 파이어베이스에서 실시간 데이터 불러오기
     database.ref('premiumApp').on('value', (snapshot) => {
         const data = snapshot.val();
         if (data) {
@@ -325,7 +357,6 @@
         renderView();
     });
 
-    // 3. 파이어베이스에 데이터 저장
     function saveData() {
         database.ref('premiumApp').set({
             todos: todos,
@@ -442,50 +473,69 @@
         let dayTodos = todos.filter(t => t.date === dateStr && !t.archived);
         dayTodos = sortTodosArray(dayTodos);
         
-        dayTodos.forEach(todo => {
-            const item = document.createElement('div');
-            item.className = `todo-item ${todo.completed ? 'completed' : ''}`;
-            
-            const catColor = getCategoryColor(todo.categoryId);
-            item.style.borderLeftColor = catColor;
-            if (!todo.time) item.style.backgroundColor = catColor;
-            
-            let catLabel = '';
-            if (todo.categoryId) {
-                const cName = getCategoryName(todo.categoryId);
-                if (cName !== '미지정') catLabel = `[${cName}] `;
+        // === [모바일 최적화: +N개 기능 추가] ===
+        // 월간 달력이면 최대 3개까지만 렌더링하고 나머지는 +N개로 묶음
+        const maxDisplay = currentView === 'month' ? 3 : 999;
+
+        dayTodos.forEach((todo, index) => {
+            if (index < maxDisplay) {
+                const item = document.createElement('div');
+                item.className = `todo-item ${todo.completed ? 'completed' : ''}`;
+                
+                const catColor = getCategoryColor(todo.categoryId);
+                item.style.borderLeftColor = catColor;
+                if (!todo.time) item.style.backgroundColor = catColor;
+                
+                let catLabel = '';
+                if (todo.categoryId) {
+                    const cName = getCategoryName(todo.categoryId);
+                    if (cName !== '미지정') catLabel = `[${cName}] `;
+                }
+                
+                const starColor = todo.isImportant ? 'var(--warning)' : '#cccccc';
+                const starIcon = todo.isImportant ? '★' : '☆';
+
+                let memoHtml = '';
+                if (currentView === 'day' && todo.memo) {
+                    memoHtml = `<div class="todo-memo-text">📝 ${todo.memo}</div>`;
+                }
+
+                item.innerHTML = `
+                    <div class="todo-item-top">
+                        <input type="checkbox" ${todo.completed ? 'checked' : ''} onchange="toggleComplete('${todo.id}', event)">
+                        <span class="todo-title-text" onclick="editTodo('${todo.id}', event)">${catLabel}${todo.time ? `[${todo.time}] ` : ''}${todo.title}</span>
+                        <span class="star-btn" style="color: ${starColor};" onclick="toggleStar('${todo.id}', event)">${starIcon}</span>
+                    </div>
+                    ${memoHtml}
+                `;
+
+                item.setAttribute('draggable', 'true');
+                item.addEventListener('dragstart', (e) => {
+                    e.stopPropagation(); draggedType = 'todo'; draggedId = todo.id; 
+                    e.dataTransfer.effectAllowed = 'move';
+                    e.dataTransfer.setData('text/plain', todo.id); 
+                    setTimeout(() => item.classList.add('dragging'), 0); 
+                });
+                item.addEventListener('dragend', () => {
+                    draggedType = null; draggedId = null; item.classList.remove('dragging');
+                    document.querySelectorAll('.day-cell').forEach(c => c.classList.remove('drag-over'));
+                });
+
+                cell.appendChild(item);
+            } 
+            else if (index === maxDisplay) {
+                // +N개 버튼 생성
+                const moreBtn = document.createElement('div');
+                moreBtn.className = 'more-todos-btn';
+                moreBtn.textContent = `+${dayTodos.length - maxDisplay}개`;
+                moreBtn.onclick = (e) => {
+                    e.stopPropagation(); // 셀 클릭 방지
+                    // '일(Day)' 뷰로 자동 이동
+                    targetDate = new Date(dateStr);
+                    document.querySelector('.nav-btn[data-view="day"]').click();
+                };
+                cell.appendChild(moreBtn);
             }
-            
-            const starColor = todo.isImportant ? 'var(--warning)' : '#cccccc';
-            const starIcon = todo.isImportant ? '★' : '☆';
-
-            let memoHtml = '';
-            if (currentView === 'day' && todo.memo) {
-                memoHtml = `<div class="todo-memo-text">📝 ${todo.memo}</div>`;
-            }
-
-            item.innerHTML = `
-                <div class="todo-item-top">
-                    <input type="checkbox" ${todo.completed ? 'checked' : ''} onchange="toggleComplete('${todo.id}', event)">
-                    <span class="todo-title-text" onclick="editTodo('${todo.id}', event)">${catLabel}${todo.time ? `[${todo.time}] ` : ''}${todo.title}</span>
-                    <span class="star-btn" style="color: ${starColor};" onclick="toggleStar('${todo.id}', event)">${starIcon}</span>
-                </div>
-                ${memoHtml}
-            `;
-
-            item.setAttribute('draggable', 'true');
-            item.addEventListener('dragstart', (e) => {
-                e.stopPropagation(); draggedType = 'todo'; draggedId = todo.id; 
-                e.dataTransfer.effectAllowed = 'move';
-                e.dataTransfer.setData('text/plain', todo.id); 
-                setTimeout(() => item.classList.add('dragging'), 0); 
-            });
-            item.addEventListener('dragend', () => {
-                draggedType = null; draggedId = null; item.classList.remove('dragging');
-                document.querySelectorAll('.day-cell').forEach(c => c.classList.remove('drag-over'));
-            });
-
-            cell.appendChild(item);
         });
 
         cell.addEventListener('dragover', e => { e.preventDefault(); cell.classList.add('drag-over'); });
@@ -536,7 +586,7 @@
         if(todos.filter(t => t.date === dateStr && !t.archived).length === 0) {
             const placeholder = document.createElement('div');
             placeholder.className = 'empty-placeholder';
-            placeholder.textContent = '이곳을 클릭하거나 상단 + 버튼을 눌러 추가하세요.';
+            placeholder.textContent = '이곳을 클릭하거나 상단 + 할일 추가 버튼을 누르세요.';
             cell.appendChild(placeholder);
         }
         cell.style.minHeight = '400px'; cell.style.border = 'none';
@@ -666,7 +716,7 @@
                     if (draggedIdx > -1) {
                         const [movedCat] = categories.splice(draggedIdx, 1);
                         categories.splice(targetIdx, 0, movedCat);
-                        saveData();
+                        saveData(); renderView();
                     }
                 }
             });
@@ -730,11 +780,8 @@
     function toggleStar(id, event) { if(event) event.stopPropagation(); const todo = todos.find(t => t.id === id); if (todo) { todo.isImportant = !todo.isImportant; saveData(); } }
     function updateTodoProp(todoId, prop, value) { const todo = todos.find(t => t.id === todoId); if (todo && todo[prop] !== value) { todo[prop] = value; saveData(); } }
 
-    // --- 여백 클릭 시 창 닫기 ---
     window.addEventListener('click', (e) => {
-        if (e.target.classList.contains('modal-overlay')) {
-            closeModal(e.target.id);
-        }
+        if (e.target.classList.contains('modal-overlay')) closeModal(e.target.id);
     });
 
     function openTodoModal(dateStr = '', catId = null) {
@@ -895,6 +942,8 @@
 
     function toggleInput(sectionId) { document.getElementById(sectionId).classList.toggle('active'); }
     function closeModal(modalId) { document.getElementById(modalId).classList.remove('active'); }
+
+    renderView();
 
 </script>
 </body>
