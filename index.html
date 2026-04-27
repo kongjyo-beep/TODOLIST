@@ -199,7 +199,7 @@
         }
         .fab:hover { transform: scale(1.05); background: #f0f0f0;}
 
-        /* ====== 모바일 & 반응형 환경 (스와이프 및 최적화) ====== */
+        /* ====== 스마트폰 화면 대응 (미디어 쿼리) ====== */
         @media (max-width: 768px) {
             body { padding: 10px; }
             .container { padding: 10px; min-height: 90vh;}
@@ -217,18 +217,11 @@
             #monthGrid .todo-title-text { text-align: center; }
             #monthGrid .todo-item-top { justify-content: center; }
             
-            /* 주간(Week) 달력 좌우 스와이프(스크롤) 구현! */
             #weekGrid {
-                display: grid;
-                grid-template-columns: repeat(7, minmax(140px, 1fr)); /* 모바일에서도 최소 140px 폭 보장 */
-                overflow-x: auto;
-                overflow-y: hidden;
-                scroll-snap-type: x mandatory; /* 넘길 때 칸에 딱 맞게 멈춤 */
-                -webkit-overflow-scrolling: touch;
+                display: grid; grid-template-columns: repeat(7, minmax(140px, 1fr));
+                overflow-x: auto; overflow-y: hidden; scroll-snap-type: x mandatory; -webkit-overflow-scrolling: touch;
             }
-            #weekGrid .weekday, #weekGrid .day-cell {
-                scroll-snap-align: start;
-            }
+            #weekGrid .weekday, #weekGrid .day-cell { scroll-snap-align: start; }
 
             .board-view { flex-direction: column; align-items: center; }
             .board-column { width: 100%; min-width: auto; }
@@ -348,6 +341,9 @@
     let editingCategoryId = null;
     let editingTodoId = null;
 
+    // 접힌 날짜들을 기억하는 메모리 세트 (새로고침 방어용)
+    let foldedDates = new Set();
+
     let todos = [];
     let categories = [
         { id: 'cat_sda', name: 'SDA', color: PASTEL_COLORS[0] }, 
@@ -359,8 +355,19 @@
     database.ref('premiumApp').on('value', (snapshot) => {
         const data = snapshot.val();
         if (data) {
-            todos = data.todos || [];
-            categories = data.categories || categories;
+            // 배열 변환 버그 완벽 방어!
+            if (data.todos) {
+                todos = Array.isArray(data.todos) ? data.todos : Object.values(data.todos);
+                todos = todos.filter(t => t); // 빈 쓰레기 데이터 제거
+            } else {
+                todos = [];
+            }
+
+            if (data.categories) {
+                categories = Array.isArray(data.categories) ? data.categories : Object.values(data.categories);
+                categories = categories.filter(c => c);
+            }
+
             todos.forEach(t => { 
                 if(t.archived === undefined) t.archived = false; 
                 if(t.isImportant === undefined) t.isImportant = false;
@@ -407,6 +414,7 @@
             let indexB = categories.findIndex(c => c.id === b.categoryId);
             if (indexA === -1) indexA = 999;
             if (indexB === -1) indexB = 999;
+            
             if (indexA !== indexB) return indexA - indexB;
 
             const timeA = a.time || '24:00';
@@ -415,7 +423,6 @@
         });
     }
 
-    // 반응형 적용을 위한 화면 크기 감지 및 자동 새로고침
     let wasMobile = window.innerWidth <= 768;
     window.addEventListener('resize', () => {
         const isMobileNow = window.innerWidth <= 768;
@@ -479,7 +486,6 @@
         }
     }
 
-    // 아이템 생성 헬퍼 함수
     function createTodoItemElement(todo, dateStr) {
         const item = document.createElement('div');
         item.className = `todo-item ${todo.completed ? 'completed' : ''}`;
@@ -544,7 +550,6 @@
         const isMobile = window.innerWidth <= 768;
 
         if (isMobile && currentView === 'month') {
-            // 모바일: 3개 초과 시 +N개 버튼 처리
             const listWrapper = document.createElement('div');
             listWrapper.className = 'todo-list-wrapper';
             dayTodos.forEach((todo, index) => {
@@ -565,9 +570,11 @@
             cell.appendChild(listWrapper);
         } 
         else if (!isMobile && currentView === 'month' && dayTodos.length > 3) {
-            // 웹(PC): 모두 보이기 기본(Expanded), 접기 기능 제공
+            // 접기 상태 기억 장치 연동
+            const isFolded = foldedDates.has(dateStr);
             const listWrapper = document.createElement('div');
-            listWrapper.className = 'todo-list-wrapper expanded'; 
+            listWrapper.className = `todo-list-wrapper ${isFolded ? 'folded' : 'expanded'}`; 
+            
             dayTodos.forEach(todo => {
                 listWrapper.appendChild(createTodoItemElement(todo, dateStr));
             });
@@ -575,23 +582,25 @@
 
             const toggleBtn = document.createElement('div');
             toggleBtn.className = 'fold-toggle-btn';
-            toggleBtn.textContent = '접기 ▲';
+            toggleBtn.textContent = isFolded ? `모두 보기 (${dayTodos.length}) ▼` : '접기 ▲';
+            
             toggleBtn.onclick = (e) => {
                 e.stopPropagation();
                 if (listWrapper.classList.contains('expanded')) {
                     listWrapper.classList.remove('expanded');
                     listWrapper.classList.add('folded');
                     toggleBtn.textContent = `모두 보기 (${dayTodos.length}) ▼`;
+                    foldedDates.add(dateStr); // 상태 저장
                 } else {
                     listWrapper.classList.remove('folded');
                     listWrapper.classList.add('expanded');
                     toggleBtn.textContent = '접기 ▲';
+                    foldedDates.delete(dateStr); // 상태 제거
                 }
             };
             cell.appendChild(toggleBtn);
         } 
         else {
-            // 기본 렌더링 (PC 일정 3개 이하, 또는 주간/일간 뷰)
             const listWrapper = document.createElement('div');
             listWrapper.className = 'todo-list-wrapper';
             dayTodos.forEach(todo => {
@@ -909,8 +918,9 @@
                 todo.title = title;
                 todo.memo = document.getElementById('todoMemo').value.trim();
                 todo.date = document.getElementById('todoDate').value || todayStr;
-                todo.time = document.getElementById('todoTime').value || null;
-                todo.categoryId = document.getElementById('todoCategorySelect').value || null;
+                // 버그 방어를 위해 null 대신 빈 문자열("") 저장
+                todo.time = document.getElementById('todoTime').value || "";
+                todo.categoryId = document.getElementById('todoCategorySelect').value || "";
             }
             saveData(); closeModal('todoModal'); 
         } else {
@@ -919,8 +929,8 @@
                 title: title,
                 memo: document.getElementById('todoMemo').value.trim(),
                 date: document.getElementById('todoDate').value || todayStr,
-                time: document.getElementById('todoTime').value || null,
-                categoryId: document.getElementById('todoCategorySelect').value || null,
+                time: document.getElementById('todoTime').value || "",
+                categoryId: document.getElementById('todoCategorySelect').value || "",
                 completed: false, archived: false, isImportant: false 
             };
             todos.push(newTodo);
@@ -997,15 +1007,13 @@
         if (editingCategoryId === 'new') return;
         if(confirm('프로젝트를 삭제하시겠습니까?\n내부의 할 일들은 "미지정"으로 이동됩니다.')) {
             categories = categories.filter(c => c.id !== editingCategoryId);
-            todos.forEach(t => { if (t.categoryId === editingCategoryId) t.categoryId = null; });
+            todos.forEach(t => { if (t.categoryId === editingCategoryId) t.categoryId = ""; });
             saveData(); closeModal('categoryModal'); 
         }
     }
 
     function toggleInput(sectionId) { document.getElementById(sectionId).classList.toggle('active'); }
     function closeModal(modalId) { document.getElementById(modalId).classList.remove('active'); }
-
-    renderView();
 
 </script>
 </body>
