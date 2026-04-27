@@ -71,7 +71,7 @@
         .day-view-container { background: white; border: 1px solid var(--border-color); border-radius: 8px; padding: 20px; min-height: 400px; position: relative;}
         .empty-placeholder { color: #aaa; text-align: center; padding: 40px; font-size: 14px; }
 
-        /* 할 일 목록 래퍼 (접기/펴기 기능용) */
+        /* 할 일 목록 래퍼 (접기/펴기) */
         .todo-list-wrapper { display: flex; flex-direction: column; gap: 4px; width: 100%; }
         .todo-list-wrapper.folded .todo-item:nth-child(n+4) { display: none; }
         .fold-toggle-btn { font-size: 11px; font-weight: bold; color: var(--text-muted); text-align: center; margin-top: auto; padding: 4px 0; cursor: pointer; transition: 0.2s; border-radius: 4px;}
@@ -345,36 +345,39 @@
     let foldedDates = new Set();
 
     let todos = [];
-    let categories = [
-        { id: 'cat_sda', name: 'SDA', color: PASTEL_COLORS[0] }, 
-        { id: 'cat_ale', name: '에일', color: PASTEL_COLORS[1] },
-        { id: 'cat_nike', name: '니케', color: PASTEL_COLORS[2] },
-        { id: 'cat_btw', name: 'BTW', color: PASTEL_COLORS[3] }
-    ];
+    let categories = [];
 
+    // 파이어베이스에서 데이터 실시간 불러오기 (버그 완벽 방어)
     database.ref('premiumApp').on('value', (snapshot) => {
         const data = snapshot.val();
         if (data) {
-            // 배열 변환 버그 완벽 방어!
+            // 배열 변환 버그 완벽 방어 (데이터가 찌그러져도 무조건 배열로 강제 변환)
             if (data.todos) {
-                todos = Array.isArray(data.todos) ? data.todos : Object.values(data.todos);
-                todos = todos.filter(t => t); // 빈 쓰레기 데이터 제거
+                todos = (Array.isArray(data.todos) ? data.todos : Object.values(data.todos)).filter(t => t);
             } else {
                 todos = [];
             }
 
             if (data.categories) {
-                categories = Array.isArray(data.categories) ? data.categories : Object.values(data.categories);
-                categories = categories.filter(c => c);
+                categories = (Array.isArray(data.categories) ? data.categories : Object.values(data.categories)).filter(c => c);
+            } else {
+                categories = [
+                    { id: 'cat_sda', name: 'SDA', color: PASTEL_COLORS[0] }, 
+                    { id: 'cat_ale', name: '에일', color: PASTEL_COLORS[1] },
+                    { id: 'cat_nike', name: '니케', color: PASTEL_COLORS[2] },
+                    { id: 'cat_btw', name: 'BTW', color: PASTEL_COLORS[3] }
+                ];
             }
 
+            // 누락된 속성 채우기
             todos.forEach(t => { 
                 if(t.archived === undefined) t.archived = false; 
                 if(t.isImportant === undefined) t.isImportant = false;
                 if(t.memo === undefined) t.memo = '';
+                if(t.categoryId === undefined) t.categoryId = '';
             });
         }
-        renderView();
+        renderView(); // 데이터 수신 완료 후 반드시 화면 그리기 호출!
     });
 
     function saveData() {
@@ -459,6 +462,7 @@
         renderView();
     }
 
+    // 화면의 모든 뷰를 그려주는 완벽한 전체 함수 (생략 없음!)
     function renderView() {
         const titleEl = document.getElementById('dateTitle');
         const y = targetDate.getFullYear();
@@ -484,6 +488,17 @@
         } else if (currentView === 'archive') {
             renderArchiveView();
         }
+    }
+
+    // 접기 토글 함수 (상태 저장)
+    function toggleFold(dateStr, event) {
+        event.stopPropagation();
+        if (foldedDates.has(dateStr)) {
+            foldedDates.delete(dateStr);
+        } else {
+            foldedDates.add(dateStr);
+        }
+        renderView();
     }
 
     function createTodoItemElement(todo, dateStr) {
@@ -570,7 +585,7 @@
             cell.appendChild(listWrapper);
         } 
         else if (!isMobile && currentView === 'month' && dayTodos.length > 3) {
-            // 접기 상태 기억 장치 연동
+            // PC: 접기 상태 완벽 기억 (새로고침 방어)
             const isFolded = foldedDates.has(dateStr);
             const listWrapper = document.createElement('div');
             listWrapper.className = `todo-list-wrapper ${isFolded ? 'folded' : 'expanded'}`; 
@@ -584,20 +599,7 @@
             toggleBtn.className = 'fold-toggle-btn';
             toggleBtn.textContent = isFolded ? `모두 보기 (${dayTodos.length}) ▼` : '접기 ▲';
             
-            toggleBtn.onclick = (e) => {
-                e.stopPropagation();
-                if (listWrapper.classList.contains('expanded')) {
-                    listWrapper.classList.remove('expanded');
-                    listWrapper.classList.add('folded');
-                    toggleBtn.textContent = `모두 보기 (${dayTodos.length}) ▼`;
-                    foldedDates.add(dateStr); // 상태 저장
-                } else {
-                    listWrapper.classList.remove('folded');
-                    listWrapper.classList.add('expanded');
-                    toggleBtn.textContent = '접기 ▲';
-                    foldedDates.delete(dateStr); // 상태 제거
-                }
-            };
+            toggleBtn.onclick = (e) => toggleFold(dateStr, e);
             cell.appendChild(toggleBtn);
         } 
         else {
@@ -918,7 +920,6 @@
                 todo.title = title;
                 todo.memo = document.getElementById('todoMemo').value.trim();
                 todo.date = document.getElementById('todoDate').value || todayStr;
-                // 버그 방어를 위해 null 대신 빈 문자열("") 저장
                 todo.time = document.getElementById('todoTime').value || "";
                 todo.categoryId = document.getElementById('todoCategorySelect').value || "";
             }
@@ -1014,6 +1015,9 @@
 
     function toggleInput(sectionId) { document.getElementById(sectionId).classList.toggle('active'); }
     function closeModal(modalId) { document.getElementById(modalId).classList.remove('active'); }
+
+    // 앱 첫 실행 시 화면 렌더링 호출
+    renderView();
 
 </script>
 </body>
